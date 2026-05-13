@@ -53,7 +53,6 @@ from nodes import (
     # routing functions
     route_after_input,
     route_after_input_safety,
-    route_after_retrieval,
     route_after_output_safety,
     route_after_handle_output,
 )
@@ -70,8 +69,8 @@ def build_graph() -> StateGraph:
     builder.add_node("handle_input_vulnerability",handle_input_vulnerability)
     builder.add_node("retrieve_context",          retrieve_context)
     builder.add_node("create_response",           create_response)
-    builder.add_node("check_output_vulnerability",check_output_vulnerability)
-    builder.add_node("handle_output_vulnerability",handle_output_vulnerability)
+#    builder.add_node("check_output_vulnerability",check_output_vulnerability)
+ #   builder.add_node("handle_output_vulnerability",handle_output_vulnerability)
     builder.add_node("text_to_speech",            text_to_speech)
     builder.add_node("save_context",              save_context)
 
@@ -108,18 +107,14 @@ def build_graph() -> StateGraph:
     )
 
     # ── Conditional: cache hit → skip LLM ────────────────────────────────────
-    builder.add_conditional_edges(
-        "retrieve_context",
-        route_after_retrieval,
-        {
-            "check_output_vulnerability": "check_output_vulnerability",
-            "create_response":            "create_response",
-        },
+    builder.add_edge(
+        "retrieve_context",                      "create_response"
     )
 
     # ── LLM → output safety ───────────────────────────────────────────────────
-    builder.add_edge("create_response", "check_output_vulnerability")
+    builder.add_edge("create_response", "text_to_speech")  # skip safety for now, or handle in-node
 
+    """
     # ── Conditional: safe output → TTS/save  |  unsafe → regen loop ─────────
     builder.add_conditional_edges(
         "check_output_vulnerability",
@@ -137,6 +132,7 @@ def build_graph() -> StateGraph:
             "create_response":  "create_response",
             "text_to_speech":   "text_to_speech",        },
     )
+    """
 
     # ── TTS → save ────────────────────────────────────────────────────────────
     builder.add_edge("text_to_speech", "save_context")

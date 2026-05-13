@@ -425,11 +425,6 @@ def route_after_input_safety(state: State) -> str:
     return "retrieve_context"
 
 
-def route_after_retrieval(state: State) -> str:
-    """Skip LLM when Redis cache returned a hit."""
-    return "create_response"
-
-
 def route_after_output_safety(state: State) -> str:
     """
     Loop back for regeneration, or proceed.
