@@ -4,931 +4,804 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI Tutor</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-
 :root{
-  /* Modern Indigo & Slate Palette */
-  --bg: #0f1117;
-  --surface: #181b24;
-  --surface-2: #222634;
-  --surface-3: #2d3345;
-  --accent: #6366f1; /* Vibrant Indigo */
-  --accent-hover: #4f46e5;
-  --accent-dim: rgba(99, 102, 241, 0.12);
-  --accent-mid: rgba(99, 102, 241, 0.3);
-  --text-1: #f8fafc;
-  --text-2: #cbd5e1;
-  --text-3: #94a3b8;
-  --border: rgba(255, 255, 255, 0.08);
-  --border-2: rgba(255, 255, 255, 0.12);
-  
-  --user-bubble: #6366f1;
-  --ai-bubble: #181b24;
-  
+  /* Modern Zinc/Violet Theme */
+  --bg: #09090b;       /* Zinc 950 */
+  --sf: #18181b;       /* Zinc 900 */
+  --sf2: #27272a;      /* Zinc 800 */
+  --sf3: #3f3f46;      /* Zinc 700 */
+  --ac: #8b5cf6;       /* Violet 500 */
+  --ac-dim: rgba(139, 92, 246, 0.15);
+  --ac-mid: rgba(139, 92, 246, 0.4);
+  --t1: #fafafa;       /* Zinc 50 */
+  --t2: #a1a1aa;       /* Zinc 400 */
+  --t3: #71717a;       /* Zinc 500 */
+  --br: #27272a;       
+  --br2: #3f3f46;
   --green: #10b981;
-  --green-dim: rgba(16, 185, 129, 0.15);
   --red: #ef4444;
-  --red-dim: rgba(239, 68, 68, 0.15);
-  
-  --radius: 14px;
-  --sidebar: 280px;
+  --r: 8px;
 }
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t1);
+  font-family:'Inter', sans-serif;font-size:15px;line-height:1.6}
 
-html,body{
-  height:100%;
-  overflow:hidden;
-  background:var(--bg);
-  color:var(--text-1);
-  font-family:'Inter', sans-serif;
-  font-size:15px;
-  line-height:1.6;
-  -webkit-font-smoothing: antialiased;
-}
-
-/* ── Layout ───────────────────────────────────────────────── */
+/* ── Layout ─────────────────────────────────────────────── */
 #app{display:flex;height:100vh}
 
-/* ── Sidebar ──────────────────────────────────────────────── */
-#sidebar{
-  width:var(--sidebar);flex-shrink:0;
-  background:var(--surface);
-  border-right:1px solid var(--border);
-  display:flex;flex-direction:column;
-  overflow:hidden;
-}
-#sidebar-header{
-  padding:24px 20px 16px;
-  flex-shrink:0;
-}
-.logo{
-  font-family:'Outfit', sans-serif;
-  font-size:22px;font-weight:700;
-  color:var(--text-1);
-  display:flex;align-items:center;gap:12px;
-  margin-bottom:20px;
-  letter-spacing: -0.5px;
-}
-.logo-dot{
-  width:10px;height:10px;border-radius:50%;
-  background:var(--accent);flex-shrink:0;
-  box-shadow: 0 0 12px var(--accent-mid);
-}
-#btn-new-session{
-  width:100%;padding:10px 14px;
-  background:var(--accent);
-  border:none;
-  border-radius:var(--radius);
-  color:#ffffff;
-  font-size:14px;font-weight:500;
-  font-family:'Inter', sans-serif;
-  cursor:pointer;
-  display:flex;align-items:center;justify-content:center;gap:8px;
-  transition:all .2s ease;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
-}
-#btn-new-session:hover{
-  background:var(--accent-hover);
-  transform: translateY(-1px);
-}
-#btn-new-session svg{width:16px;height:16px;stroke:#fff;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
-
-#sessions-label{
-  padding:10px 20px 8px;
-  font-size:11px;letter-spacing:.08em;text-transform:uppercase;
-  color:var(--text-3);font-family:'JetBrains Mono', monospace;flex-shrink:0;
-  font-weight: 500;
-}
-#sessions-list{flex:1;overflow-y:auto;padding:8px 12px 20px}
-#sessions-list::-webkit-scrollbar{width:4px}
-#sessions-list::-webkit-scrollbar-track{background:transparent}
-#sessions-list::-webkit-scrollbar-thumb{background:var(--border-2);border-radius:2px}
-
-.session-item{
-  padding:12px 14px;border-radius:10px;cursor:pointer;
-  margin-bottom:4px;
-  transition:all .2s ease;
-  position:relative;
-  border: 1px solid transparent;
-}
-.session-item:hover{
-  background:var(--surface-2);
-  border-color: var(--border);
-}
-.session-item.active{
-  background:var(--surface-2);
-  border-color: var(--border-2);
-}
-.session-item.active::before{
-  content:'';position:absolute;left:-12px;top:50%;transform:translateY(-50%);
-  width:4px;height:24px;background:var(--accent);border-radius:0 4px 4px 0;
-}
-.session-name{font-size:14px;color:var(--text-1);font-weight:500;
+/* ── Sidebar ─────────────────────────────────────────────── */
+#sb{width:280px;flex-shrink:0;background:var(--bg);border-right:1px solid var(--br);
+  display:flex;flex-direction:column;overflow:hidden}
+#sb-head{padding:20px 16px 14px;border-bottom:1px solid var(--br);flex-shrink:0}
+.logo{font-size:18px;font-weight:600;color:var(--t1);letter-spacing:-0.02em;
+  display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.ldot{width:10px;height:10px;border-radius:2px;background:var(--ac);flex-shrink:0}
+#btn-new{width:100%;padding:10px 12px;background:var(--t1);border:none;
+  border-radius:var(--r);color:var(--bg);font-size:14px;font-weight:600;
+  font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  gap:8px;transition:transform .1s, opacity .2s}
+#btn-new:hover{opacity:0.9}
+#btn-new:active{transform:scale(0.98)}
+#slist-label{padding:20px 16px 8px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--t3);font-weight:600;flex-shrink:0}
+#slist{flex:1;overflow-y:auto;padding:4px 8px 16px}
+#slist::-webkit-scrollbar{width:3px}
+#slist::-webkit-scrollbar-thumb{background:var(--br2);border-radius:2px}
+.si{padding:12px;border-radius:var(--r);cursor:pointer;margin-bottom:4px;
+  transition:background .15s;position:relative;border:1px solid transparent}
+.si:hover{background:var(--sf);border-color:var(--br)}
+.si.active{background:var(--sf);border-color:var(--br2)}
+.si.active::before{content:'';position:absolute;left:-1px;top:20%;bottom:20%;
+  width:3px;background:var(--ac);border-radius:0 4px 4px 0}
+.sn{font-size:14px;color:var(--t1);font-weight:500;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
-.session-meta{font-size:12px;color:var(--text-3);margin-top:4px}
-.session-del{
-  position:absolute;right:12px;top:50%;transform:translateY(-50%);
-  opacity:0;width:28px;height:28px;background:var(--surface-3);border:none;
-  cursor:pointer;color:var(--text-2);display:flex;align-items:center;justify-content:center;
-  transition:all .2s ease;border-radius:6px;
-}
-.session-item:hover .session-del{opacity:1}
-.session-del:hover{color:var(--red); background:var(--red-dim);}
-.session-del svg{width:14px;height:14px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.sm{font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:4px}
+.sdel{position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  opacity:0;width:26px;height:26px;background:var(--sf2);border:none;cursor:pointer;
+  color:var(--t2);display:flex;align-items:center;justify-content:center;
+  transition:all .15s;border-radius:6px}
+.si:hover .sdel{opacity:1}
+.sdel:hover{color:var(--red);background:var(--sf3)}
 
-/* ── Main chat area ───────────────────────────────────────── */
-#main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+/* ── Main ─────────────────────────────────────────────────── */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--sf)}
 
-#chat-header{
-  padding:16px 32px;
-  border-bottom:1px solid var(--border);
+/* ── Chat header ─────────────────────────────────────────── */
+#chat-head{padding:16px 28px;border-bottom:1px solid var(--br);
   display:flex;align-items:center;justify-content:space-between;
-  flex-shrink:0;
-  background:rgba(24, 27, 36, 0.8);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  z-index: 10;
-}
-#chat-title{font-family:'Outfit', sans-serif;font-size:18px;font-weight:600;color:var(--text-1)}
-#chat-session-id{font-size:12px;color:var(--text-3);font-family:'JetBrains Mono', monospace;margin-top:2px}
-.status-pill{
-  padding:6px 14px;border-radius:24px;font-size:12px;font-family:'JetBrains Mono', monospace;
-  background:var(--surface-2);border:1px solid var(--border-2);color:var(--text-2);
-  display: flex; align-items: center; gap: 8px;
-}
-.status-pill::before {
-  content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--green);
-}
+  flex-shrink:0;background:var(--sf);backdrop-filter:blur(10px)}
+#chat-title{font-size:16px;font-weight:600;letter-spacing:-0.01em}
+#chat-sid{font-size:12px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:2px}
+#status-pill{padding:4px 12px;border-radius:6px;font-size:11px;
+  font-family:'JetBrains Mono',monospace;background:var(--bg);border:1px solid var(--br);color:var(--t2);
+  transition:all .3s}
+#status-pill.streaming{color:var(--ac);border-color:var(--ac-mid);background:var(--ac-dim)}
+#status-pill.recording{color:var(--red);border-color:rgba(239,68,68,.4);
+  background:rgba(239,68,68,.08);animation:rpulse 1.4s ease-in-out infinite}
+@keyframes rpulse{0%,100%{opacity:1}50%{opacity:.6}}
 
-#messages{
-  flex:1;overflow-y:auto;padding:32px;
-  display:flex;flex-direction:column;gap:24px;
-}
-#messages::-webkit-scrollbar{width:6px}
-#messages::-webkit-scrollbar-track{background:transparent}
-#messages::-webkit-scrollbar-thumb{background:var(--surface-3);border-radius:3px}
+/* ── Messages ─────────────────────────────────────────────── */
+#msgs{flex:1;overflow-y:auto;padding:32px;
+  display:flex;flex-direction:column;gap:32px}
+#msgs::-webkit-scrollbar{width:6px}
+#msgs::-webkit-scrollbar-thumb{background:var(--br2);border-radius:3px}
 
-/* ── Empty state ──────────────────────────────────────────── */
-#empty-state{
-  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:20px;text-align:center;padding:40px;
-}
-.empty-icon{
-  width:64px;height:64px;border-radius:20px;
-  background:var(--accent-dim);border:1px solid var(--accent-mid);
-  display:flex;align-items:center;justify-content:center;
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.1);
-}
-.empty-icon svg{width:32px;height:32px;stroke:var(--accent);stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
-#empty-state h2{font-family:'Outfit', sans-serif;font-size:24px;font-weight:600;color:var(--text-1)}
-#empty-state p{font-size:15px;color:var(--text-3);max-width:360px;line-height:1.7}
+#empty{flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:16px;text-align:center;padding:40px}
+.eicon{width:64px;height:64px;border-radius:16px;background:var(--bg);
+  border:1px solid var(--br2);display:flex;align-items:center;justify-content:center;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2)}
+#empty h2{font-size:22px;font-weight:600;letter-spacing:-0.02em}
+#empty p{font-size:14px;color:var(--t2);max-width:340px;line-height:1.6}
 
-/* ── Message bubbles ──────────────────────────────────────── */
-.msg{display:flex;flex-direction:column;gap:6px;max-width:800px}
-.msg.user{align-self:flex-end;align-items:flex-end}
-.msg.ai{align-self:flex-start;align-items:flex-start}
-
-.msg-header{
-  display:flex;align-items:center;gap:10px;
-  font-size:12px;color:var(--text-3);font-family:'JetBrains Mono', monospace;
-  margin: 0 4px;
-}
-.msg-role{
-  font-size:12px;
-  font-weight:600;
-  font-family: 'Outfit', sans-serif;
-  letter-spacing: 0.5px;
-}
-.msg.user .msg-role{color:var(--accent)}
-.msg.ai .msg-role{color:var(--green)}
-
-.bubble{
-  padding:16px 20px;border-radius:18px;
-  line-height:1.6;font-size:15px;
-  max-width:680px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-}
-.msg.user .bubble{
-  background:var(--user-bubble);
-  border-bottom-right-radius:4px;
-  color:#ffffff;
-}
-.msg.ai .bubble{
-  background:var(--ai-bubble);
-  border:1px solid var(--border-2);
-  border-bottom-left-radius:4px;
-  color:var(--text-1);
-}
-.msg.ai .bubble p{margin-bottom:1em}
-.msg.ai .bubble p:last-child{margin-bottom:0}
-.msg.ai .bubble code{
-  font-family:'JetBrains Mono', monospace;font-size:13px;
-  background:var(--surface-2);padding:3px 6px;border-radius:6px;
-  color: #e2e8f0;
-}
-.msg.ai .bubble pre{
-  background:#0d0f14;border:1px solid var(--border-2);
-  border-radius:12px;padding:16px;overflow-x:auto;
-  font-size:13px;font-family:'JetBrains Mono', monospace;margin:1em 0;
-}
+.msg{display:flex;flex-direction:column;gap:8px;max-width:800px;width:100%;margin:0 auto}
+.msg.user{align-items:flex-end}
+.msg.ai{align-items:flex-start}
+.mh{display:flex;align-items:center;gap:10px;font-size:11px;
+  color:var(--t3);font-family:'JetBrains Mono',monospace;flex-wrap:wrap;padding:0 4px}
+.mrole{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em}
+.msg.user .mrole{color:var(--t2)}
+.msg.ai   .mrole{color:var(--ac)}
+.bubble{line-height:1.7;font-size:15px;max-width:100%}
+.msg.user .bubble{background:var(--sf2);padding:14px 20px;border-radius:12px;
+  border-bottom-right-radius:4px;color:var(--t1);border:1px solid var(--br2)}
+.msg.ai   .bubble{background:transparent;color:var(--t1)}
+.msg.ai .bubble p+p{margin-top:1em}
+.msg.ai .bubble code{font-family:'JetBrains Mono',monospace;font-size:13px;
+  background:var(--bg);border:1px solid var(--br);padding:2px 6px;border-radius:6px;color:#d4d4d8}
+.msg.ai .bubble pre{background:var(--bg);border:1px solid var(--br);
+  border-radius:8px;padding:16px;overflow-x:auto;
+  font-size:13px;font-family:'JetBrains Mono',monospace;margin:1.2em 0;
+  box-shadow:inset 0 2px 4px rgba(0,0,0,0.2)}
+/* streaming cursor */
+.cursor::after{content:'▍';color:var(--ac);animation:blink-c .7s step-start infinite;margin-left:4px}
+@keyframes blink-c{50%{opacity:0}}
 
 /* ── Audio player ─────────────────────────────────────────── */
-.audio-player{
-  display:flex;align-items:center;gap:12px;
-  padding:12px 16px;border-radius:12px;
-  background:var(--surface-2);
-  border:1px solid var(--border-2);
-  max-width:380px;
-  margin-top: 8px;
-}
-.play-btn{
-  width:36px;height:36px;border-radius:50%;
-  background:var(--accent);
+.aplayer{display:none;align-items:center;gap:12px;padding:12px 16px;
+  border-radius:10px;background:var(--bg);border:1px solid var(--br);max-width:380px;
+  margin-top:8px;box-shadow: 0 2px 10px rgba(0,0,0,0.1)}
+.pbtn{width:36px;height:36px;border-radius:8px;background:var(--sf2);
+  border:1px solid var(--br2);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;flex-shrink:0;transition:all .2s}
+.pbtn:hover{background:var(--sf3);transform:scale(1.05)}
+.waves{display:flex;align-items:center;gap:3px;height:24px;flex:1}
+.wb{width:3px;border-radius:2px;background:var(--sf3);transition:height .1s}
+.wb.active{background:var(--ac);animation:wave-a .5s ease-in-out infinite alternate}
+@keyframes wave-a{from{height:4px}to{height:18px}}
+.atime{font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace;
+  margin-top:4px;white-space:nowrap}
+.abadge{font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;
+  padding:2px 8px;border-radius:6px;border:1px solid var(--br2);background:var(--sf)}
+.abadge.playing{color:var(--t1);border-color:var(--ac);background:var(--ac-dim)}
+
+/* ── Meta tags ─────────────────────────────────────────────── */
+.bcache{font-size:10px;padding:2px 8px;border-radius:6px;font-family:'JetBrains Mono',monospace;
+  background:rgba(16, 185, 129, 0.1);border:1px solid rgba(16, 185, 129, 0.2);color:var(--green)}
+.blatency{font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace}
+.bvoice{font-size:10px;color:var(--ac);font-family:'JetBrains Mono',monospace}
+.src-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.src{font-size:11px;font-family:'JetBrains Mono',monospace;padding:4px 10px;border-radius:6px;
+  background:var(--bg);border:1px solid var(--br);color:var(--t2);cursor:default;transition:all .2s}
+.src:hover{border-color:var(--br2);color:var(--t1)}
+
+/* ── Thinking dots ─────────────────────────────────────────── */
+.thinking{display:flex;align-items:center;gap:6px;
+  padding:16px 20px;border:1px solid var(--br);border-radius:12px;
+  border-bottom-left-radius:4px;background:var(--bg)}
+.df{width:6px;height:6px;border-radius:2px;background:var(--t3);
+  animation:df-a .9s ease-in-out infinite alternate}
+.df:nth-child(2){animation-delay:.2s}.df:nth-child(3){animation-delay:.4s}
+@keyframes df-a{0%{opacity:.2;transform:translateY(2px)}100%{opacity:1;transform:translateY(-2px);background:var(--ac)}}
+
+/* ── Input area ─────────────────────────────────────────────── */
+#inp-area{flex-shrink:0;padding:20px 32px 24px;background:var(--sf);
+  border-top:1px solid var(--br);display:flex;flex-direction:column;align-items:center}
+#inp-container{width:100%;max-width:800px}
+#rec-bar{display:none;align-items:center;gap:10px;padding:8px 14px;
+  background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);
+  border-radius:8px;margin-bottom:12px;font-size:13px;color:var(--red);
+  font-family:'JetBrains Mono',monospace;font-weight:500}
+#rec-bar.on{display:flex}
+.rdot{width:8px;height:8px;border-radius:2px;background:var(--red);
+  animation:blink .9s step-start infinite}
+@keyframes blink{50%{opacity:0}}
+#rec-time{font-size:13px;color:var(--red);margin-left:auto}
+#inp-wrap{display:flex;align-items:flex-end;gap:10px;background:var(--bg);
+  border:1px solid var(--br);border-radius:16px;padding:10px 10px 10px 18px;
+  transition:all .2s;box-shadow: 0 4px 20px rgba(0,0,0,0.1)}
+#inp-wrap:focus-within{border-color:var(--ac);box-shadow: 0 0 0 2px var(--ac-dim), 0 4px 20px rgba(0,0,0,0.1)}
+#tinput{flex:1;background:none;border:none;outline:none;resize:none;
+  color:var(--t1);font-family:inherit;font-size:15px;line-height:1.6;
+  min-height:24px;max-height:160px;padding:4px 0}
+#tinput::placeholder{color:var(--t3)}
+.ibtn{width:40px;height:40px;border-radius:10px;border:none;
   display:flex;align-items:center;justify-content:center;
-  cursor:pointer;flex-shrink:0;transition:all .2s;
-  border: none;
-}
-.play-btn:hover{background:var(--accent-hover); transform: scale(1.05);}
-.play-btn svg{width:16px;height:16px;fill:#fff; margin-left: 2px;}
-.audio-info{flex:1;min-width:0}
-.audio-waveform{
-  height:24px;display:flex;align-items:center;gap:3px;
-}
-.wbar{
-  width:3px;border-radius:2px;background:var(--text-3);
-  transition:background .2s, height .1s;
-}
-.audio-time{font-size:12px;color:var(--text-3);font-family:'JetBrains Mono', monospace;margin-top:6px}
+  cursor:pointer;flex-shrink:0;transition:all .2s}
+.ibtn:active{transform:scale(.95)}
+#btn-mic{background:var(--sf2);border:1px solid transparent;color:var(--t2)}
+#btn-mic:hover{background:var(--sf3);color:var(--t1)}
+#btn-mic.rec{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);
+  color:var(--red);animation:rpulse 1.4s ease-in-out infinite}
+#btn-send{background:var(--ac);color:white}
+#btn-send:hover{background:#7c3aed;box-shadow:0 0 12px var(--ac-dim)}
+#btn-send:disabled{background:var(--sf2);color:var(--t3);cursor:not-allowed;box-shadow:none}
+#inp-hint{margin-top:12px;font-size:12px;color:var(--t3);
+  font-family:'JetBrains Mono',monospace;text-align:center}
 
-/* ── Sources ──────────────────────────────────────────────── */
-.sources{
-  display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;
-}
-.source-tag{
-  font-size:12px;font-family:'Inter', sans-serif;font-weight: 500;
-  padding:4px 10px;border-radius:6px;
-  background:var(--surface-2);border:1px solid var(--border-2);
-  color:var(--text-2);
-  display: flex; align-items: center; gap: 6px;
-}
-.badge-cache{
-  font-size:11px;font-family:'JetBrains Mono', monospace;
-  padding:2px 8px;border-radius:12px;
-  background:var(--green-dim);
-  border:1px solid rgba(16, 185, 129, 0.3);
-  color:var(--green);
-}
-.badge-latency{
-  font-size:11px;font-family:'JetBrains Mono', monospace;
-  color:var(--text-3);
-  background: var(--surface-2);
-  padding: 2px 8px; border-radius: 12px;
-}
+/* ── No session ─────────────────────────────────────────────── */
+#no-sess{flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:16px;text-align:center;padding:40px}
+#no-sess h3{font-size:24px;font-weight:600;letter-spacing:-0.02em}
+#no-sess p{font-size:14px;color:var(--t2);max-width:300px;line-height:1.6}
+#btn-start{margin-top:12px;padding:12px 24px;background:var(--t1);
+  border:none;border-radius:var(--r);color:var(--bg);
+  font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .2s}
+#btn-start:hover{opacity:0.9;transform:translateY(-1px)}
 
-/* ── Input area ───────────────────────────────────────────── */
-#input-area{
-  flex-shrink:0;
-  padding:20px 32px 24px;
-  background:var(--bg);
-  border-top:1px solid var(--border);
-  position: relative;
-}
-#input-wrap{
-  display:flex;align-items:flex-end;gap:12px;
-  background:var(--surface);
-  border:1px solid var(--border-2);
-  border-radius:16px;
-  padding:12px 12px 12px 20px;
-  transition:all .2s ease;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-}
-#input-wrap:focus-within{
-  border-color:var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-dim);
-}
-#text-input{
-  flex:1;background:none;border:none;outline:none;resize:none;
-  color:var(--text-1);font-family:'Inter', sans-serif;
-  font-size:15px;line-height:1.6;min-height:24px;max-height:150px;
-  padding-bottom: 4px;
-}
-#text-input::placeholder{color:var(--text-3)}
-.input-btn{
-  width:40px;height:40px;border-radius:10px;border:none;
-  display:flex;align-items:center;justify-content:center;
-  cursor:pointer;flex-shrink:0;transition:all .2s ease;
-}
-.input-btn:active{transform:scale(.95)}
-.input-btn svg{width:20px;height:20px;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
-
-#btn-mic{background:var(--surface-2);border:1px solid var(--border-2)}
-#btn-mic svg{stroke:var(--text-2)}
-#btn-mic:hover{background:var(--surface-3); border-color:var(--border);}
-#btn-mic.recording{
-  background:var(--red-dim);
-  border-color:rgba(239, 68, 68, 0.4);
-  animation:mic-pulse 1.5s ease-in-out infinite;
-}
-#btn-mic.recording svg{stroke:var(--red)}
-@keyframes mic-pulse{0%,100%{box-shadow:0 0 0 0 rgba(239, 68, 68, 0)}50%{box-shadow:0 0 0 8px rgba(239, 68, 68, 0.15)}}
-
-#btn-send{background:var(--accent);border:none;}
-#btn-send svg{stroke:#fff}
-#btn-send:hover{background:var(--accent-hover); transform: translateY(-1px);}
-#btn-send:disabled{background:var(--surface-3);cursor:not-allowed;opacity:.5; transform: none;}
-#btn-send:disabled svg{stroke:var(--text-3)}
-
-/* ── Recording indicator ──────────────────────────────────── */
-#rec-indicator{
-  display:none;align-items:center;gap:10px;padding:10px 16px;
-  background:var(--red-dim);border:1px solid rgba(239, 68, 68, 0.2);
-  border-radius:10px;margin-bottom:12px;
-  font-size:13px;color:var(--red);font-weight: 500;
-  width: fit-content;
-}
-#rec-indicator.visible{display:flex}
-.rec-dot{width:10px;height:10px;border-radius:50%;background:var(--red);animation:blink 1s step-start infinite}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
-#rec-timer{font-size:13px;color:var(--text-1);font-family:'JetBrains Mono', monospace;margin-left:8px}
-
-/* ── Thinking animation ───────────────────────────────────── */
-.thinking{
-  display:flex;align-items:center;gap:6px;
-  padding:18px 24px;
-}
-.dot-flashing{
-  width:8px;height:8px;border-radius:50%;background:var(--accent);
-  animation:dot-flash 1s ease-in-out infinite alternate;
-}
-.dot-flashing:nth-child(2){animation-delay:.2s}
-.dot-flashing:nth-child(3){animation-delay:.4s}
-@keyframes dot-flash{0%{opacity:.3;transform:scale(.8)}100%{opacity:1;transform:scale(1.2)}}
-
-/* ── No session placeholder ───────────────────────────────── */
-#no-session{
-  flex:1;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:16px;text-align:center;padding:40px;
-}
-#no-session h3{font-family:'Outfit', sans-serif;font-size:26px;font-weight:600;color:var(--text-1)}
-#no-session p{font-size:15px;color:var(--text-3);max-width:320px;line-height:1.6}
-#btn-start{
-  margin-top:12px;padding:12px 24px;
-  background:var(--accent);border:none;
-  border-radius:var(--radius);color:#fff;
-  font-size:15px;font-weight:500;font-family:'Inter', sans-serif;
-  cursor:pointer;transition:all .2s ease;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
-}
-#btn-start:hover{background:var(--accent-hover); transform: translateY(-2px);}
-
-/* ── Toast ────────────────────────────────────────────────── */
-#toast{
-  position:fixed;bottom:32px;right:32px;
-  padding:12px 20px;border-radius:10px;
-  background:var(--surface-3);border:1px solid var(--border-2);
-  font-size:14px;font-weight: 500;color:var(--text-1);
-  opacity:0;transform:translateY(12px);
-  transition:all .3s cubic-bezier(0.16, 1, 0.3, 1);pointer-events:none;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-  z-index:100;
-}
+/* ── Toast ─────────────────────────────────────────────────── */
+#toast{position:fixed;bottom:32px;right:32px;padding:12px 20px;border-radius:8px;
+  background:var(--bg);border:1px solid var(--br);font-size:13px;
+  font-family:'JetBrains Mono',monospace;color:var(--t1);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  opacity:0;transform:translateY(12px);transition:all .3s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events:none;z-index:200}
 #toast.show{opacity:1;transform:translateY(0)}
 </style>
 </head>
 <body>
 <div id="app">
 
-  <aside id="sidebar">
-    <div id="sidebar-header">
-      <div class="logo">
-        <span class="logo-dot"></span>
-        AI Tutor
-      </div>
-      <button id="btn-new-session">
-        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  <aside id="sb">
+    <div id="sb-head">
+      <div class="logo"><span class="ldot"></span>AI Tutor</div>
+      <button id="btn-new">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         New Session
       </button>
     </div>
-    <div id="sessions-label">Recent Sessions</div>
-    <div id="sessions-list"></div>
+    <div id="slist-label">Recent Sessions</div>
+    <div id="slist"></div>
   </aside>
 
   <main id="main">
 
-    <div id="no-session">
-      <div class="empty-icon">
-        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <div id="no-sess">
+      <div class="eicon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       </div>
       <h3>Welcome to AI Tutor</h3>
-      <p>Create a new session or select an existing one from the sidebar to start learning.</p>
-      <button id="btn-start">Create First Session</button>
+      <p>Create a new session or select an existing one to begin.</p>
+      <button id="btn-start">Create Session</button>
     </div>
 
     <div id="chat-view" style="display:none;flex-direction:column;flex:1;overflow:hidden">
-      <div id="chat-header">
+      <div id="chat-head">
         <div>
-          <div id="chat-title">Session Name</div>
-          <div id="chat-session-id"></div>
+          <div id="chat-title">Session</div>
+          <div id="chat-sid"></div>
         </div>
-        <div class="status-pill" id="status-pill">Ready</div>
+        <div id="status-pill">Ready</div>
       </div>
 
-      <div id="messages">
+      <div id="msgs">
+        <div id="empty">
+          <div class="eicon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <h2>Start the conversation</h2>
+          <p>Type a question or record your voice. Responses stream in real-time alongside audio.</p>
         </div>
+      </div>
 
-      <div id="input-area">
-        <div id="rec-indicator">
-          <span class="rec-dot"></span>
-          Recording in progress…
-          <span id="rec-timer">0:00</span>
-        </div>
-        <div id="input-wrap">
-          <textarea id="text-input" placeholder="Ask me a question..." rows="1"></textarea>
-          <button class="input-btn" id="btn-mic" title="Toggle voice recording">
-            <svg viewBox="0 0 24 24" stroke="currentColor">
-              <rect x="9" y="2" width="6" height="12" rx="3"/>
-              <path d="M19 10a7 7 0 0 1-14 0"/>
-              <line x1="12" y1="19" x2="12" y2="22"/>
-              <line x1="8" y1="22" x2="16" y2="22"/>
-            </svg>
-          </button>
-          <button class="input-btn" id="btn-send" title="Send message">
-            <svg viewBox="0 0 24 24" stroke="white">
-              <line x1="22" y1="2" x2="11" y2="13"/>
-              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-            </svg>
-          </button>
-        </div>
-        <div style="margin-top:12px;display:flex;align-items:center;justify-content:center;gap:12px;">
-          <span style="font-size:12px;color:var(--text-3);font-family:'Inter', sans-serif;">
-            🎙️ Voice input supported • 🔊 Audio responses enabled
-          </span>
+      <div id="inp-area">
+        <div id="inp-container">
+          <div id="rec-bar">
+            <span class="rdot"></span> Recording…
+            <span id="rec-time">0:00</span>
+          </div>
+          <div id="inp-wrap">
+            <textarea id="tinput" placeholder="Ask me anything…" rows="1"></textarea>
+            <button class="ibtn" id="btn-mic" title="Toggle voice recording">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="2" width="6" height="12" rx="3"/>
+                <path d="M19 10a7 7 0 0 1-14 0"/><line x1="12" y1="19" x2="12" y2="22"/>
+                <line x1="8" y1="22" x2="16" y2="22"/>
+              </svg>
+            </button>
+            <button class="ibtn" id="btn-send" title="Send">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2" fill="currentColor" stroke="none"/>
+              </svg>
+            </button>
+          </div>
+          <div id="inp-hint">Press Enter to send · Shift + Enter for new line</div>
         </div>
       </div>
     </div>
 
   </main>
 </div>
-
 <div id="toast"></div>
 
 <script>
-// (Keep all your existing JavaScript here exactly as it was. I only omitted it to save space, but you should paste your original <script> tag logic below.)
+/* ═══════════════════════════════════════════════════════════════════
+   AUDIO QUEUE – FIFO sequential playback
+   Chunks arrive via SSE as base64 WAV.  They are queued here and
+   played one after the other without overlap.
+═══════════════════════════════════════════════════════════════════ */
+const AudioQueue = (() => {
+  const queue   = [];
+  let playing   = false;
+  let onChunk   = null;
+  let onIdle    = null;
 
+  function enqueue(index, b64, text) {
+    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    queue.push({ index, bytes, text });
+    if (!playing) _playNext();
+  }
+
+  function _playNext() {
+    if (!queue.length) { playing = false; onIdle && onIdle(); return; }
+    playing = true;
+    const { index, bytes, text } = queue.shift();
+    const blob = new Blob([bytes], { type: 'audio/wav' });
+    const url  = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    onChunk && onChunk(index, text);
+    audio.addEventListener('ended', () => {
+      URL.revokeObjectURL(url);
+      _playNext();
+    });
+    audio.addEventListener('error', () => {
+      URL.revokeObjectURL(url);
+      _playNext();
+    });
+    audio.play().catch(() => _playNext());
+  }
+
+  function reset() { queue.length = 0; playing = false; }
+
+  return { enqueue, reset, get isPlaying() { return playing; }, set onChunk(fn){ onChunk=fn }, set onIdle(fn){ onIdle=fn } };
+})();
+
+/* ═══════════════════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════════════════ */
 const API = '';
-let currentSessionId = null;
-let currentSessionName = null;
-let mediaRecorder = null;
+let curSid    = null;
+let isBusy    = false;
+let recorder  = null;
 let audioChunks = [];
-let recInterval = null;
-let recSeconds = 0;
-let isBusy = false;
+let recSec    = 0;
+let recTick   = null;
 
-const $ = id => document.getElementById(id);
-const qs = s => document.querySelector(s);
+let streamEl  = null;
+let streamBubble = null;
+let streamText = '';
+let pendingFinalise = null;
 
-/* ── Helpers ───────────────────────────────────────────────── */
-function toast(msg, dur=2500){
+/* ═══════════════════════════════════════════════════════════════════
+   DOM helpers
+═══════════════════════════════════════════════════════════════════ */
+const $  = id => document.getElementById(id);
+const esc = s  => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+function toast(msg, dur=2600) {
   const el=$('toast'); el.textContent=msg; el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'), dur);
 }
-function setStatus(s){ 
-  const pill = $('status-pill');
-  pill.textContent=s;
-  if(s === 'Ready') {
-    pill.style.borderColor = 'var(--border-2)';
-    pill.style.color = 'var(--text-2)';
-  } else {
-    pill.style.borderColor = 'var(--accent-mid)';
-    pill.style.color = 'var(--accent)';
-  }
+function setStatus(txt, cls='') {
+  const p=$('status-pill');
+  p.textContent=txt;
+  p.className='';
+  if(cls) p.classList.add(cls);
 }
-function fmtTime(d){
-  const dt=new Date(d*1000);
-  const now=new Date();
-  const diff=(now-dt)/1000;
-  if(diff<60) return 'just now';
-  if(diff<3600) return Math.floor(diff/60)+'m ago';
-  if(diff<86400) return Math.floor(diff/3600)+'h ago';
-  return dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});
-}
-function autoGrow(el){
+function autoGrow(el) {
   el.style.height='auto';
-  el.style.height=Math.min(el.scrollHeight,150)+'px';
+  el.style.height=Math.min(el.scrollHeight,160)+'px';
 }
-function scrollToBottom(){
-  const m=$('messages');
-  m.scrollTop=m.scrollHeight;
+function scrollBottom() {
+  const m=$('msgs'); m.scrollTop=m.scrollHeight;
 }
-
-/* ── Session list ──────────────────────────────────────────── */
-async function loadSessions(){
-  try{
-    const r=await fetch(API+'/api/sessions?limit=30');
-    const d=await r.json();
-    renderSessionList(d.sessions||[]);
-  }catch(e){console.warn('Sessions load failed',e)}
+function fmtAgo(ts) {
+  const d=(Date.now()/1000)-ts;
+  if(d<60) return 'just now';
+  if(d<3600) return Math.floor(d/60)+'m ago';
+  if(d<86400) return Math.floor(d/3600)+'h ago';
+  return new Date(ts*1000).toLocaleDateString('vi-VN',{month:'short',day:'numeric'});
 }
 
-function renderSessionList(sessions){
-  const list=$('sessions-list');
-  list.innerHTML='';
-  if(!sessions.length){
-    list.innerHTML='<p style="font-size:13px;color:var(--text-3);padding:16px 14px;font-family:\'Inter\',sans-serif">No sessions yet</p>';
+/* ═══════════════════════════════════════════════════════════════════
+   SESSION LIST
+═══════════════════════════════════════════════════════════════════ */
+async function loadSessions() {
+  try {
+    const d = await (await fetch(API+'/api/sessions?limit=30')).json();
+    renderSessions(d.sessions||[]);
+  } catch(e) { console.warn('loadSessions',e); }
+}
+
+function renderSessions(list) {
+  const el=$('slist'); el.innerHTML='';
+  if(!list.length) {
+    el.innerHTML='<p style="font-size:12px;color:var(--t3);padding:12px 10px;font-family:\'JetBrains Mono\',monospace">No sessions yet</p>';
     return;
   }
-  sessions.forEach(s=>{
-    const div=document.createElement('div');
-    div.className='session-item'+(s.session_id===currentSessionId?' active':'');
-    div.dataset.id=s.session_id;
-    div.innerHTML=`
-      <div class="session-name">${escHtml(s.name)}</div>
-      <div class="session-meta">${fmtTime(s.updated_at)}</div>
-      <button class="session-del" data-id="${s.session_id}" title="Delete session">
-        <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+  list.forEach(s => {
+    const d=document.createElement('div');
+    d.className='si'+(s.session_id===curSid?' active':'');
+    d.dataset.id=s.session_id;
+    d.innerHTML=`<div class="sn">${esc(s.name)}</div>
+      <div class="sm">${fmtAgo(s.updated_at)}</div>
+      <button class="sdel" data-id="${s.session_id}" title="Delete">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          <path d="M10 11v6"/><path d="M14 11v6"/>
+        </svg>
       </button>`;
-    div.addEventListener('click', e=>{
-      if(!e.target.closest('.session-del')) loadSession(s.session_id, s.name);
+    d.addEventListener('click', e => {
+      if(!e.target.closest('.sdel')) openSession(s.session_id, s.name);
     });
-    div.querySelector('.session-del').addEventListener('click', e=>{
+    d.querySelector('.sdel').addEventListener('click', e => {
       e.stopPropagation(); deleteSession(s.session_id);
     });
-    list.appendChild(div);
+    el.appendChild(d);
   });
 }
 
-function escHtml(s){
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+async function createSession(name) {
+  const r = await fetch(API+'/api/sessions', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name: name||null, user_id:'user'})
+  });
+  const d = await r.json();
+  await loadSessions();
+  openSession(d.session.session_id, d.session.name);
 }
 
-/* ── Create session ────────────────────────────────────────── */
-async function createSession(name){
-  try{
-    const r=await fetch(API+'/api/sessions',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({name:name||null,user_id:'user'})
-    });
-    const d=await r.json();
-    await loadSessions();
-    loadSession(d.session.session_id, d.session.name);
-  }catch(e){ toast('Failed to create session'); console.error(e); }
-}
-
-/* ── Load existing session ─────────────────────────────────── */
-async function loadSession(sid, name){
-  currentSessionId=sid;
-  currentSessionName=name;
+async function openSession(sid, name) {
+  curSid=sid;
   $('chat-title').textContent=name;
-  $('chat-session-id').textContent=sid.slice(0,18)+'…';
-  $('no-session').style.display='none';
+  $('chat-sid').textContent=sid.slice(0,20)+'…';
+  $('no-sess').style.display='none';
   $('chat-view').style.display='flex';
-  clearMessages();
-  setStatus('Loading…');
-
-  try{
-    const r=await fetch(API+'/api/sessions/'+sid);
-    const d=await r.json();
-    const history=d.history||[];
-    if(history.length){
-      $('empty-state').style.display='none';
-      // Replay history pairs
-      for(let i=0;i<history.length;i+=2){
-        const u=history[i], a=history[i+1];
-        if(u) appendMessage('user', u.content);
-        if(a) appendMessage('ai', a.content, null, null, null, []);
+  clearMsgs(); setStatus('Loading…');
+  try {
+    const d = await (await fetch(API+'/api/sessions/'+sid)).json();
+    const hist = d.history||[];
+    if(hist.length) {
+      hideEmpty();
+      for(let i=0; i<hist.length; i+=2) {
+        const u=hist[i], a=hist[i+1];
+        if(u) appendMsg('user', u.content);
+        if(a) appendMsg('ai', a.content);
       }
     }
-    setStatus('Ready');
-    updateActiveSession();
-    scrollToBottom();
-  }catch(e){
-    setStatus('Ready');
-    updateActiveSession();
-  }
+  } catch(e) {}
+  setStatus('Ready'); updateActive(); scrollBottom();
 }
 
-function updateActiveSession(){
-  document.querySelectorAll('.session-item').forEach(el=>{
-    el.classList.toggle('active', el.dataset.id===currentSessionId);
-  });
+function updateActive() {
+  document.querySelectorAll('.si').forEach(el =>
+    el.classList.toggle('active', el.dataset.id===curSid)
+  );
 }
 
-/* ── Delete session ────────────────────────────────────────── */
-async function deleteSession(sid){
+async function deleteSession(sid) {
   if(!confirm('Delete this session?')) return;
-  try{
-    await fetch(API+'/api/sessions/'+sid,{method:'DELETE'});
-    if(sid===currentSessionId){
-      currentSessionId=null;
-      $('no-session').style.display='flex';
-      $('chat-view').style.display='none';
-    }
-    await loadSessions();
-    toast('Session deleted');
-  }catch(e){ toast('Delete failed'); }
+  await fetch(API+'/api/sessions/'+sid, {method:'DELETE'});
+  if(sid===curSid) {
+    curSid=null;
+    $('no-sess').style.display='flex';
+    $('chat-view').style.display='none';
+  }
+  await loadSessions();
+  toast('Session deleted');
 }
 
-/* ── Message rendering ─────────────────────────────────────── */
-function clearMessages(){
-  const m=$('messages');
-  m.innerHTML='<div id="empty-state">' +
-    '<div class="empty-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>' +
-    '<h2>Start the conversation</h2>' +
-    '<p>Type a question or use the microphone. I\'ll respond with text and audio.</p>' +
-    '</div>';
+/* ═══════════════════════════════════════════════════════════════════
+   MESSAGES
+═══════════════════════════════════════════════════════════════════ */
+function clearMsgs() {
+  $('msgs').innerHTML=`<div id="empty">
+    <div class="eicon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+    <h2>Start the conversation</h2>
+    <p>Type a question or record your voice. Responses stream in real-time alongside audio.</p>
+  </div>`;
+}
+function hideEmpty() {
+  const e=$('empty'); if(e) e.style.display='none';
 }
 
-function hideEmpty(){
-  const e=$('empty-state');
-  if(e) e.style.display='none';
-}
-
-function appendMessage(role, text, audioB64=null, sources=[], cacheHit=false, latencyMs=null){
+function appendMsg(role, text, meta={}) {
   hideEmpty();
-  const m=$('messages');
+  const m=$('msgs');
   const div=document.createElement('div');
   div.className='msg '+role;
-  const now=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  const now=new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});
+  let badges='';
+  if(meta.cache)   badges+=`<span class="bcache">cache hit</span>`;
+  if(meta.latency) badges+=`<span class="blatency">${meta.latency}ms</span>`;
+  if(meta.voice)   badges+=`<span class="bvoice">🎤 voice</span>`;
 
-  let html=`<div class="msg-header">
-    <span class="msg-role">${role==='user'?'You':'AI Tutor'}</span>
-    <span style="color:var(--text-3);">${now}</span>
-    ${cacheHit?'<span class="badge-cache">cache hit</span>':''}
-    ${latencyMs!==null?`<span class="badge-latency">${latencyMs}ms</span>`:''}
-  </div>`;
+  div.innerHTML=`<div class="mh">
+    <span class="mrole">${role==='user'?'You':'AI Tutor'}</span>
+    <span>${now}</span>${badges}
+  </div>
+  <div class="bubble">${fmtText(text)}</div>`;
 
-  html+=`<div class="bubble">${formatContent(text)}</div>`;
-
-  if(audioB64){
-    html+=buildAudioPlayer(audioB64);
+  if(meta.sources && meta.sources.length) {
+    const sw=document.createElement('div');
+    sw.className='src-wrap';
+    sw.innerHTML=meta.sources.map(s=>`<span class="src">📄 ${esc(s)}</span>`).join('');
+    div.appendChild(sw);
   }
-  if(sources&&sources.length){
-    html+=`<div class="sources">${sources.map(s=>`<span class="source-tag">📄 ${escHtml(s)}</span>`).join('')}</div>`;
-  }
-
-  div.innerHTML=html;
   m.appendChild(div);
-
-  if(audioB64){
-    initAudioPlayer(div.querySelector('.audio-player'), audioB64);
-  }
-
-  scrollToBottom();
+  scrollBottom();
   return div;
 }
 
-function formatContent(text){
-  let html=escHtml(text);
-  html=html.replace(/```([\s\S]*?)```/g,'<pre><code>$1</code></pre>');
-  html=html.replace(/`([^`]+)`/g,'<code>$1</code>');
-  html=html.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
-  html=html.replace(/\*(.*?)\*/g,'<em>$1</em>');
-  html=html.replace(/\n/g,'<br>');
-  return `<p>${html}</p>`;
+function fmtText(raw) {
+  let h=esc(raw);
+  h=h.replace(/```([\s\S]*?)```/g,'<pre><code>$1</code></pre>');
+  h=h.replace(/`([^`\n]+)`/g,'<code>$1</code>');
+  h=h.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+  h=h.replace(/\*(.*?)\*/g,'<em>$1</em>');
+  h=h.replace(/\n{2,}/g,'</p><p>').replace(/\n/g,'<br>');
+  return `<p>${h}</p>`;
 }
 
-/* ── Audio player ──────────────────────────────────────────── */
-function buildAudioPlayer(b64){
-  const bars=Array.from({length:24},(_,i)=>{
-    const h=6+Math.floor(Math.random()*18);
-    return `<div class="wbar" style="height:${h}px"></div>`;
-  }).join('');
-  return `<div class="audio-player">
-    <button class="play-btn" title="Play response">
-      <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-    </button>
-    <div class="audio-info">
-      <div class="audio-waveform">${bars}</div>
-      <div class="audio-time">Audio response</div>
-    </div>
-  </div>`;
-}
-
-function initAudioPlayer(playerEl, b64){
-  if(!playerEl) return;
-  const btn=playerEl.querySelector('.play-btn');
-  const timeEl=playerEl.querySelector('.audio-time');
-  const bars=playerEl.querySelectorAll('.wbar');
-
-  const bytes=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
-  const blob=new Blob([bytes],{type:'audio/wav'});
-  const url=URL.createObjectURL(blob);
-  const audio=new Audio(url);
-
-  let playing=false;
-  let animFrame;
-
-  function animateBars(on){
-    cancelAnimationFrame(animFrame);
-    if(!on){bars.forEach(b=>b.style.background='var(--text-3)');return;}
-    function frame(){
-      bars.forEach(b=>{
-        const h=6+Math.floor(Math.random()*18);
-        b.style.height=h+'px';
-        b.style.background='var(--accent)';
-      });
-      animFrame=requestAnimationFrame(frame);
-    }
-    frame();
-  }
-
-  function fmtDur(s){
-    if(isNaN(s)) return '0:00';
-    return Math.floor(s/60)+':'+(Math.floor(s%60)+'').padStart(2,'0');
-  }
-
-  audio.addEventListener('loadedmetadata',()=>{
-    timeEl.textContent=fmtDur(audio.duration);
-  });
-  audio.addEventListener('timeupdate',()=>{
-    timeEl.textContent=fmtDur(audio.currentTime)+' / '+fmtDur(audio.duration);
-  });
-  audio.addEventListener('ended',()=>{
-    playing=false;
-    btn.innerHTML=`<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
-    animateBars(false);
-    timeEl.textContent=fmtDur(audio.duration);
-  });
-
-  btn.addEventListener('click',()=>{
-    if(!playing){
-      audio.play();
-      playing=true;
-      btn.innerHTML=`<svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>`;
-      animateBars(true);
-    } else {
-      audio.pause();
-      playing=false;
-      btn.innerHTML=`<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
-      animateBars(false);
-    }
-  });
-
-  // Auto-play
-  setTimeout(()=>btn.click(), 300);
-}
-
-/* ── Thinking bubble ───────────────────────────────────────── */
-function showThinking(){
+function showThinking() {
   hideEmpty();
-  const m=$('messages');
+  const m=$('msgs');
   const div=document.createElement('div');
-  div.id='thinking-bubble';
+  div.id='thinking';
   div.className='msg ai';
-  div.innerHTML=`<div class="msg-header"><span class="msg-role">AI Tutor</span></div>
-    <div class="bubble thinking">
-      <div class="dot-flashing"></div>
-      <div class="dot-flashing"></div>
-      <div class="dot-flashing"></div>
-    </div>`;
-  m.appendChild(div);
-  scrollToBottom();
+  div.innerHTML=`<div class="mh"><span class="mrole">AI Tutor</span></div>
+    <div class="thinking"><div class="df"></div><div class="df"></div><div class="df"></div></div>`;
+  m.appendChild(div); scrollBottom();
 }
-function hideThinking(){
-  const t=$('thinking-bubble');
-  if(t) t.remove();
+function hideThinking() {
+  const t=$('thinking'); if(t) t.remove();
 }
 
-/* ── Send text ─────────────────────────────────────────────── */
-async function sendText(){
-  if(isBusy||!currentSessionId) return;
-  const input=$('text-input');
-  const text=input.value.trim();
-  if(!text) return;
-  input.value='';
-  input.style.height='auto';
-  isBusy=true; $('btn-send').disabled=true; setStatus('Thinking…');
+function startStreamMsg() {
+  hideThinking(); hideEmpty();
+  const m=$('msgs');
+  streamEl=document.createElement('div');
+  streamEl.className='msg ai';
+  const now=new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});
+  streamEl.innerHTML=`<div class="mh"><span class="mrole">AI Tutor</span><span>${now}</span></div>
+    <div class="bubble cursor" id="stream-bubble"></div>`;
+  m.appendChild(streamEl);
+  streamBubble=streamEl.querySelector('#stream-bubble');
+  streamText='';
+  
+  const ap=document.createElement('div');
+  ap.className='aplayer';
+  ap.id='aplayer-current';
+  ap.innerHTML=buildAPlayer();
+  streamEl.appendChild(ap);
+  initAPlayer(ap);
 
-  appendMessage('user', text);
-  showThinking();
+  scrollBottom();
+}
 
-  try{
-    const fd=new FormData();
-    fd.append('session_id', currentSessionId);
-    fd.append('user_id','user');
-    fd.append('text', text);
+function appendStreamToken(token) {
+  streamText+=token;
+  if(streamBubble) {
+    streamBubble.innerHTML=fmtText(streamText);
+    scrollBottom();
+  }
+}
 
-    const r=await fetch(API+'/api/chat',{method:'POST',body:fd});
-    const d=await r.json();
-    hideThinking();
+function finaliseStreamMsg(fullText, meta={}) {
+  if(streamBubble) {
+    streamText=fullText;
+    streamBubble.classList.remove('cursor');
+    streamBubble.innerHTML=fmtText(fullText);
+    const hdr=streamEl.querySelector('.mh');
+    if(meta.cache)   hdr.insertAdjacentHTML('beforeend','<span class="bcache">cache hit</span>');
+    if(meta.latency) hdr.insertAdjacentHTML('beforeend',`<span class="blatency">${meta.latency}ms</span>`);
+  }
+  if(meta.sources && meta.sources.length) {
+    const sw=document.createElement('div');
+    sw.className='src-wrap';
+    sw.innerHTML=meta.sources.map(s=>`<span class="src">📄 ${esc(s)}</span>`).join('');
+    const ap = streamEl ? streamEl.querySelector('.aplayer') : null;
+    if(ap) streamEl.insertBefore(sw, ap);
+    else if (streamEl) streamEl.appendChild(sw);
+  }
+  scrollBottom();
+  streamEl=null; streamBubble=null;
+}
 
-    if(d.error){ appendMessage('ai','⚠ '+d.error); }
-    else {
-      appendMessage('ai', d.response, d.audio_b64, d.sources, d.is_cache_hit, d.latency_ms);
-      await loadSessions();
+/* ═══════════════════════════════════════════════════════════════════
+   AUDIO PLAYER WIDGET
+═══════════════════════════════════════════════════════════════════ */
+function buildAPlayer() {
+  const bars=Array.from({length:22},(_,i)=>{
+    const h=4+Math.floor(Math.random()*14);
+    return `<div class="wb" style="height:${h}px"></div>`;
+  }).join('');
+  return `<div class="pbtn" title="Play / Pause">
+      <svg width="12" height="14" viewBox="0 0 24 24" fill="var(--ac)"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+    </div>
+    <div style="flex:1;min-width:0">
+      <div class="waves">${bars}</div>
+      <div class="atime">Buffering audio…</div>
+    </div>
+    <span class="abadge">LIVE</span>`;
+}
+
+let globalAPlayer = null;
+
+function initAPlayer(playerEl) {
+  globalAPlayer=playerEl;
+  const pbtn   = playerEl.querySelector('.pbtn');
+  const timeEl = playerEl.querySelector('.atime');
+  const badge  = playerEl.querySelector('.abadge');
+  const bars   = playerEl.querySelectorAll('.wb');
+
+  AudioQueue.onChunk = (idx, text) => {
+    if (text) appendStreamToken(text);
+    badge.textContent=`${idx+1}`;
+    badge.classList.add('playing');
+    timeEl.textContent=`Chunk ${idx+1} playing…`;
+    bars.forEach(b=>{b.classList.add('active');b.style.animationDelay=Math.random()*.3+'s'});
+  };
+  AudioQueue.onIdle = () => {
+    bars.forEach(b=>b.classList.remove('active'));
+    badge.textContent='Done';
+    badge.classList.remove('playing');
+    timeEl.textContent='Audio complete';
+    pbtn.innerHTML=`<svg width="12" height="14" viewBox="0 0 24 24" fill="var(--ac)"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
+    
+    if (pendingFinalise) {
+      finaliseStreamMsg(pendingFinalise.text, pendingFinalise.meta);
+      pendingFinalise = null;
     }
-  }catch(e){
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   STREAMING FETCH
+═══════════════════════════════════════════════════════════════════ */
+async function sendStreaming(formData) {
+  AudioQueue.reset();
+  pendingFinalise = null;
+  
+  showThinking();
+  setStatus('Streaming…', 'streaming');
+
+  let started        = false;
+  let sources        = [];
+  let latency        = null;
+  let isCacheHit     = false;
+
+  try {
+    const resp = await fetch(API+'/api/chat/stream', {
+      method: 'POST',
+      body:   formData,
+    });
+
+    if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+    const reader  = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let leftover  = '';
+
+    while(true) {
+      const { done, value } = await reader.read();
+      if(done) break;
+
+      leftover += decoder.decode(value, { stream: true });
+      const parts = leftover.split('\n\n');
+      leftover = parts.pop();
+
+      for(const part of parts) {
+        const line = part.trim();
+        if(!line.startsWith('data:')) continue;
+        let evt;
+        try { evt = JSON.parse(line.slice(5).trim()); }
+        catch { continue; }
+
+        switch(evt.type) {
+          case 'user_query': updateLastUserQuery(evt.text); break;
+          case 'context_ready': sources = evt.sources||[]; break;
+          case 'text_chunk':
+            if(!started) { startStreamMsg(); started=true; }
+            appendStreamToken(evt.text);
+            break;
+          case 'audio_chunk':
+            if(!started) { startStreamMsg(); started=true; }
+            if(evt.audio_b64) AudioQueue.enqueue(evt.index, evt.audio_b64, evt.text);
+            break;
+          case 'text_end':
+            const meta = { sources, cache: isCacheHit, latency };
+            if(AudioQueue.isPlaying) pendingFinalise = { text: evt.full_text, meta };
+            else finaliseStreamMsg(evt.full_text, meta);
+            break;
+          case 'done':
+            latency    = evt.latency_ms;
+            isCacheHit = evt.is_cache_hit||false;
+            break;
+          case 'blocked': toast(`⚠ Blocked: ${evt.reason||'policy'}`); break;
+          case 'error':
+            hideThinking(); appendMsg('ai','⚠ '+evt.message); break;
+        }
+      }
+    }
+  } catch(e) {
     hideThinking();
-    appendMessage('ai','⚠ Connection error. Is the server running?');
+    appendMsg('ai','⚠ Connection error. Is the server running at port 8080?');
+    console.error(e);
   }
 
-  isBusy=false; $('btn-send').disabled=false; setStatus('Ready');
+  isBusy=false;
+  $('btn-send').disabled=false;
+  setStatus('Ready');
+  await loadSessions();
 }
 
-/* ── Voice recording ───────────────────────────────────────── */
-async function toggleRecording(){
-  if(mediaRecorder&&mediaRecorder.state==='recording'){
-    stopRecording();
-  } else {
-    await startRecording();
-  }
+function updateLastUserQuery(text) {
+  if(!text) return;
+  const userMsgs=$('msgs').querySelectorAll('.msg.user');
+  if(!userMsgs.length) return;
+  const last=userMsgs[userMsgs.length-1];
+  const b=last.querySelector('.bubble');
+  if(b && b.textContent.includes('🎤')) b.innerHTML=fmtText(text);
 }
 
-async function startRecording(){
-  try{
-    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-    audioChunks=[];
-    mediaRecorder=new MediaRecorder(stream,{mimeType:'audio/webm'});
-    mediaRecorder.ondataavailable=e=>{ if(e.data.size>0) audioChunks.push(e.data); };
-    mediaRecorder.onstop=()=>{ handleRecordingStop(stream); };
-    mediaRecorder.start(100);
-
-    $('btn-mic').classList.add('recording');
-    $('rec-indicator').classList.add('visible');
-    recSeconds=0;
-    updateRecTimer();
-    recInterval=setInterval(()=>{ recSeconds++; updateRecTimer(); },1000);
-    setStatus('Recording…');
-  }catch(e){
-    toast('Microphone access denied');
-  }
-}
-
-function stopRecording(){
-  if(mediaRecorder&&mediaRecorder.state==='recording'){
-    mediaRecorder.stop();
-  }
-  $('btn-mic').classList.remove('recording');
-  $('rec-indicator').classList.remove('visible');
-  clearInterval(recInterval);
-  setStatus('Processing audio…');
-}
-
-function updateRecTimer(){
-  const m=Math.floor(recSeconds/60);
-  const s=(recSeconds%60+'').padStart(2,'0');
-  $('rec-timer').textContent=m+':'+s;
-}
-
-async function handleRecordingStop(stream){
-  stream.getTracks().forEach(t=>t.stop());
-  if(!audioChunks.length||!currentSessionId){ setStatus('Ready'); return; }
-
-  const blob=new Blob(audioChunks,{type:'audio/webm'});
+/* ═══════════════════════════════════════════════════════════════════
+   SEND TEXT & VOICE
+═══════════════════════════════════════════════════════════════════ */
+async function sendText() {
+  if(isBusy||!curSid) return;
+  const t=$('tinput');
+  const text=t.value.trim();
+  if(!text) return;
+  t.value=''; t.style.height='auto';
   isBusy=true; $('btn-send').disabled=true;
 
-  appendMessage('user','🎤 Voice message');
-  showThinking();
+  appendMsg('user', text);
 
-  try{
-    const fd=new FormData();
-    fd.append('session_id', currentSessionId);
-    fd.append('user_id','user');
-    fd.append('audio', blob, 'recording.webm');
-
-    const r=await fetch(API+'/api/chat',{method:'POST',body:fd});
-    const d=await r.json();
-    hideThinking();
-
-    // Replace placeholder with transcript if available
-    if(d.user_query&&d.user_query!=='🎤 Voice message'){
-      const msgs=$('messages').querySelectorAll('.msg.user');
-      const last=msgs[msgs.length-1];
-      if(last) last.querySelector('.bubble').innerHTML=formatContent(d.user_query);
-    }
-
-    if(d.error){ appendMessage('ai','⚠ '+d.error); }
-    else {
-      appendMessage('ai', d.response, d.audio_b64, d.sources, d.is_cache_hit, d.latency_ms);
-      await loadSessions();
-    }
-  }catch(e){
-    hideThinking();
-    appendMessage('ai','⚠ Connection error or audio processing failed.');
-  }
-
-  isBusy=false; $('btn-send').disabled=false; setStatus('Ready');
+  const fd=new FormData();
+  fd.append('session_id', curSid);
+  fd.append('user_id','user');
+  fd.append('text', text);
+  await sendStreaming(fd);
 }
 
-/* ── Event listeners ───────────────────────────────────────── */
-$('btn-new-session').addEventListener('click',()=>{
-  const name=prompt('Session name (optional):','');
-  createSession(name||null);
+async function toggleRec() {
+  if(recorder && recorder.state==='recording') { stopRec(); }
+  else { await startRec(); }
+}
+
+async function startRec() {
+  try {
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    audioChunks=[];
+    recorder=new MediaRecorder(stream,{mimeType:'audio/webm'});
+    recorder.ondataavailable=e=>{ if(e.data.size>0) audioChunks.push(e.data); };
+    recorder.onstop=()=>handleRecStop(stream);
+    recorder.start(100);
+    $('btn-mic').classList.add('rec');
+    $('rec-bar').classList.add('on');
+    setStatus('Recording…','recording');
+    recSec=0; updateRecTime();
+    recTick=setInterval(()=>{ recSec++; updateRecTime(); },1000);
+  } catch(e) { toast('Microphone access denied'); }
+}
+
+function stopRec() {
+  if(recorder&&recorder.state==='recording') recorder.stop();
+  $('btn-mic').classList.remove('rec');
+  $('rec-bar').classList.remove('on');
+  clearInterval(recTick);
+  setStatus('Processing…','streaming');
+}
+
+function updateRecTime() {
+  const m=Math.floor(recSec/60), s=(recSec%60+'').padStart(2,'0');
+  $('rec-time').textContent=m+':'+s;
+}
+
+async function handleRecStop(stream) {
+  stream.getTracks().forEach(t=>t.stop());
+  if(!audioChunks.length||!curSid) { setStatus('Ready'); return; }
+  isBusy=true; $('btn-send').disabled=true;
+
+  const blob=new Blob(audioChunks,{type:'audio/webm'});
+  appendMsg('user','🎤 Voice message',{voice:true});
+
+  const fd=new FormData();
+  fd.append('session_id', curSid);
+  fd.append('user_id','user');
+  fd.append('audio', blob,'rec.webm');
+  await sendStreaming(fd);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   EVENT LISTENERS & INIT
+═══════════════════════════════════════════════════════════════════ */
+$('btn-new').addEventListener('click',()=>{
+  const n=prompt('Session name (optional):','');
+  createSession(n||null);
 });
 $('btn-start').addEventListener('click',()=>createSession(null));
 $('btn-send').addEventListener('click', sendText);
-$('btn-mic').addEventListener('click', toggleRecording);
-
-$('text-input').addEventListener('keydown',e=>{
-  if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendText(); }
+$('btn-mic').addEventListener('click', toggleRec);
+$('tinput').addEventListener('keydown', e=>{
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendText();}
 });
-$('text-input').addEventListener('input',()=>autoGrow($('text-input')));
+$('tinput').addEventListener('input',()=>autoGrow($('tinput')));
 
-/* ── Init ──────────────────────────────────────────────────── */
 loadSessions();
 </script>
 </body>

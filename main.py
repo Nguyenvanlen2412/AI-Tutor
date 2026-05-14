@@ -67,7 +67,6 @@ def run_voice_turn(
     output_format: str = "text_and_voice",
 ) -> dict:
     """
-    Single voice-in, voice-or-text-out turn.
     Returns the final State dict.
     """
     initial: State = {

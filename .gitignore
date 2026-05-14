@@ -2,3 +2,5 @@
 __pycache__/
 .env
 tts solution.md
+qdrant_db/
+qdrant_db_export.zip

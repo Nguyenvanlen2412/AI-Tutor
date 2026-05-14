@@ -25,19 +25,19 @@ class Config:
 
     # ── Ollama (Core LLM + Query Reformulation + Safety) ─────────────────────
     OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-    CORE_LLM_MODEL: str = os.getenv("CORE_LLM_MODEL", "gemma3:1b-it-qat")
-    REFORMULATION_MODEL: str = os.getenv("REFORMULATION_MODEL", "gemma3:270m")
+    CORE_LLM_MODEL: str = os.getenv("CORE_LLM_MODEL", "gemma3:4b-it-qat")
+    REFORMULATION_MODEL: str = os.getenv("REFORMULATION_MODEL", "gemma3:1b-it-qat")
     LLAMA_GUARD_MODEL: str = os.getenv("LLAMA_GUARD_MODEL", "llama-guard3:1b")
     LLM_TEMPERATURE: float = float(os.getenv("LLM_TEMPERATURE", "0.7"))
     LLM_MAX_TOKENS: int = int(os.getenv("LLM_MAX_TOKENS", "1024"))
 
     # ── BGE-M3 Embeddings ──────────────────────────────────────────────────────
-    EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "BAAI/bge-m3")
+    EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
     EMBEDDING_DEVICE: str = os.getenv("EMBEDDING_DEVICE", "cpu")  # or "cuda"
     EMBEDDING_BATCH_SIZE: int = int(os.getenv("EMBEDDING_BATCH_SIZE", "12"))
 
     # ── BGE Reranker ───────────────────────────────────────────────────────────
-    RERANKER_MODEL: str = os.getenv("RERANKER_MODEL", "BAAI/bge-reranker-v2-m3")
+    RERANKER_MODEL: str = os.getenv("RERANKER_MODEL", "jinaai/jina-reranker-v1-turbo-en")
     RERANKER_DEVICE: str = os.getenv("RERANKER_DEVICE", "cpu")
 
     # ── Qdrant ─────────────────────────────────────────────────────────────────
@@ -57,7 +57,6 @@ class Config:
     CACHE_SIMILARITY_THRESHOLD: float = float(os.getenv("CACHE_SIMILARITY_THRESHOLD", "0.8"))
     CACHE_KEY_PREFIX: str = "ai_tutor:cache:"
 
-    # ── Zep Memory ────────────────────────────────────────────────────────────
     MEMORY_WINDOW: int = int(os.getenv("MEMORY_WINDOW", "10"))
 
     # ── TTS ───────────────────────────────────────────────────────────────────

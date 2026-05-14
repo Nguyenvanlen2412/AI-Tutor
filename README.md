@@ -50,7 +50,6 @@ Voice/Text Input
 | **Ollama** | 11434 | `ollama serve` then `ollama pull gemma3:4b` and `ollama pull llama-guard3:1b` |
 | **Qdrant** | 6333 | `docker run -p 6333:6333 qdrant/qdrant` |
 | **Redis Stack** | 6379 | `docker run -p 6379:6379 redis/redis-stack-server` |
-| **Zep** | 8000 | See [getzep.com/docs](https://docs.getzep.com/deployment/docker/) |
 
 ---
 
@@ -77,7 +76,12 @@ python main.py --query "Giải thích định lý Pythagoras"
 
 # Voice input
 python main.py --voice lecture.wav --output voice
+
+
+# Run server
+uvicorn server:app --host 0.0.0.0 --port 8080 --reload
 ```
+# → open http://localhost:8080
 
 ---
 

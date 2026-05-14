@@ -49,9 +49,19 @@ Instructions:
 
 - Answer in the language the student uses (English).
 
+- Use simple, concise language and break down complex ideas into easy-to-understand steps.
+
+- Do not add emojis or informal slang.
+
+- Do not give links or references to external resources; instead, explain concepts directly.
+
 - If context is provided in the material, prioritize using that information.
 
 - Cite sources if necessary.
+
+- Be concise by default. Answer in 5-7 sentences unless the user explicitly asks for detail.
+
+- Avoid long introductions, disclaimers, and unnecessary framing.
 
 - If unsure, be upfront and suggest the student consult additional resources.
 
@@ -221,7 +231,7 @@ def retrieve_context(state: State) -> State:
     # ── b) Query reformulation ─────────────────────────────────────────────────
     llm = get_llm()
     rewritten = llm.reformulate_query(query, history, entities)
-    logger.info(f"[retrieve_context] rewritten_query='{rewritten[:100]}'")
+    logger.info(f"[retrieve_context] rewritten_query='{rewritten}'")
 
     # ── c) Embed ───────────────────────────────────────────────────────────────
     embedder = get_embedder()
@@ -283,12 +293,12 @@ def create_response(state: State) -> State:
     # ── Build context block ────────────────────────────────────────────────────
     ctx_parts: List[str] = []
     if summary:
-        ctx_parts.append(f"[Tóm tắt cuộc hội thoại trước]\n{summary}")
+        ctx_parts.append(f"[previous conversation summary]\n{summary}")
     if reranked:
         ctx_str = "\n\n".join(
-            f"[Tài liệu {i+1}] {p}" for i, p in enumerate(reranked)
+            f"[Document {i+1}] {p}" for i, p in enumerate(reranked)
         )
-        ctx_parts.append(f"[Ngữ cảnh từ tài liệu]\n{ctx_str}")
+        ctx_parts.append(f"[Context from documents]\n{ctx_str}")
 
     # ── System message ─────────────────────────────────────────────────────────
     system_content = SYSTEM_PROMPT
@@ -296,8 +306,8 @@ def create_response(state: State) -> State:
         system_content += "\n\n" + "\n\n".join(ctx_parts)
     if regen_count > 0:
         system_content += (
-            "\n\n[QUAN TRỌNG] Câu trả lời trước đã vi phạm chính sách an toàn. "
-            "Hãy cung cấp một câu trả lời hoàn toàn an toàn, phù hợp và hữu ích."
+            "\n\n[IMPORTANT] The previous response violated the safety policy. "
+            "Please provide a completely safe, appropriate, and helpful response."
         )
 
     # ── Assemble messages list ─────────────────────────────────────────────────
@@ -311,14 +321,14 @@ def create_response(state: State) -> State:
         response = llm.chat(messages)
     except Exception as exc:
         logger.error(f"[create_response] LLM call failed: {exc}")
-        response = "Xin lỗi, đã xảy ra lỗi khi tạo câu trả lời. Vui lòng thử lại."
+        response = "Sorry, an error occurred while generating the response. Please try again."
 
     logger.info(f"[create_response] regen={regen_count} response_len={len(response)}")
 
     return {**state, "llm_response": response}
 
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━══
 # 7. check_output_vulnerability
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
