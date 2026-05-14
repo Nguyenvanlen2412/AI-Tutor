@@ -399,10 +399,10 @@ class VectorStoreService:
 
     def __init__(self) -> None:
         from qdrant_client import QdrantClient
-        logger.info(f"Connecting to Qdrant at {cfg.QDRANT_URL} …")
+        local_db_path = "./qdrant_db"
+        logger.info(f"Connecting to Qdrant at {local_db_path} …")
         self.client = QdrantClient(
-            url=cfg.QDRANT_URL,
-            api_key=cfg.QDRANT_API_KEY or None,
+            path=local_db_path,
             timeout=30,
         )
         logger.info("Qdrant client ready.")
