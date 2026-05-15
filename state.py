@@ -27,8 +27,6 @@ class State(TypedDict, total=False):
     rewritten_query: str             # reformulated query from Gemma 3B
 
     # ── RETRIEVAL ──────────────────────────────────────────────────────────────
-    is_cache_hit: bool               # True if Redis semantic cache returned a hit
-    cached_response: str             # cached LLM response text
     retrieved_context: List[str]     # raw Qdrant passages
     reranked_context: List[str]      # BGE-Reranker top-k passages
     sources: List[str]               # document names / URLs for citations

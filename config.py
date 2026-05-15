@@ -29,7 +29,7 @@ class Config:
     REFORMULATION_MODEL: str = os.getenv("REFORMULATION_MODEL", "gemma3:270m")
     LLAMA_GUARD_MODEL: str = os.getenv("LLAMA_GUARD_MODEL", "llama-guard3:1b")
     LLM_TEMPERATURE: float = float(os.getenv("LLM_TEMPERATURE", "0.7"))
-    LLM_MAX_TOKENS: int = int(os.getenv("LLM_MAX_TOKENS", "1024"))
+    LLM_MAX_TOKENS: int = int(os.getenv("LLM_MAX_TOKENS", "2048"))
 
     # ── BGE-M3 Embeddings ──────────────────────────────────────────────────────
     EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "BAAI/bge-m3")
@@ -44,7 +44,8 @@ class Config:
     QDRANT_URL: str = os.getenv("QDRANT_URL", "http://localhost:6333")
     QDRANT_API_KEY: str = os.getenv("QDRANT_API_KEY", "")
     QDRANT_COLLECTION: str = os.getenv("QDRANT_COLLECTION", "ai_tutor_docs")
-    QDRANT_VECTOR_SIZE: int = int(os.getenv("QDRANT_VECTOR_SIZE", "1024"))  # BGE-M3 dense dim
+    QDRANT_VECTOR_SIZE: int = int(os.getenv("QDRANT_VECTOR_SIZE", "1024"))
+    QDRANT_PATH: str = os.getenv("QDRANT_PATH", "./qdrant_db")  # BGE-M3 dense dim
 
     # ── Retrieval ──────────────────────────────────────────────────────────────
     TOP_K_RETRIEVE: int = int(os.getenv("TOP_K_RETRIEVE", "10"))

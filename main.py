@@ -97,8 +97,6 @@ def _print_result(result: dict) -> None:
 
     if result.get("sources"):
         print("\n  Sources:", ", ".join(result["sources"]))
-    if result.get("is_cache_hit"):
-        print("  [Cache HIT]")
     if result.get("error_message"):
         print(f"  [Error] {result['error_message']}")
 

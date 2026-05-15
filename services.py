@@ -5,6 +5,7 @@ All heavy models are loaded once on first use to avoid slowing startup.
 """
 
 from __future__ import annotations
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 import io
 import json
@@ -13,6 +14,7 @@ import struct
 import time
 from functools import lru_cache
 from typing import List, Optional, Tuple
+from dotenv import load_dotenv
 
 import numpy as np
 import requests
@@ -20,6 +22,8 @@ import requests
 from config import cfg
 
 logger = logging.getLogger(__name__)
+
+load_dotenv()
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -230,20 +234,21 @@ class RerankerService:
     """Cross-encoder reranker; returns top-k passages sorted by score (desc)."""
 
     def __init__(self) -> None:
-        from FlagEmbedding import FlagReranker
+        from sentence_transformers import CrossEncoder
         logger.info(f"Loading {cfg.RERANKER_MODEL} …")
-        self.model = FlagReranker(
+        self.model = CrossEncoder(
             cfg.RERANKER_MODEL,
-            use_fp16=(cfg.RERANKER_DEVICE == "cuda"),
             device=cfg.RERANKER_DEVICE,
+            max_length=512,
         )
         logger.info("BGE-Reranker ready.")
 
     def rerank(self, query: str, passages: List[str], top_k: int) -> Tuple[List[str], List[float]]:
         pairs = [[query, p] for p in passages]
-        scores = self.model.compute_score(pairs, normalize=True)
+        scores = self.model.predict(pairs).tolist()  # relevance scores (higher = more relevant)
         ranked = sorted(zip(passages, scores), key=lambda x: x[1], reverse=True)
         top = ranked[:top_k]
+        logger.info(f"Reranked top {top_k} passages with scores: {[s for _, s in top]}")
         return [p for p, _ in top], [s for _, s in top]
 
 
@@ -321,7 +326,6 @@ def get_safety() -> SafetyService:
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 class LLMService:
-    """Thin wrapper around Ollama's /api/chat endpoint."""
 
     def chat(
         self,
@@ -331,24 +335,19 @@ class LLMService:
         max_tokens: Optional[int] = None,
     ) -> str:
         try:
-            payload = {
-                "model": model or cfg.CORE_LLM_MODEL,
-                "messages": messages,
-                "stream": False,
-                "options": {
-                    "temperature": temperature if temperature is not None else cfg.LLM_TEMPERATURE,
-                    "num_predict": max_tokens or cfg.LLM_MAX_TOKENS,
-                },
-            }
-            resp = requests.post(
-                f"{cfg.OLLAMA_BASE_URL}/api/chat",
-                json=payload,
-                timeout=120,
+            llm = ChatGoogleGenerativeAI(
+                model=model or cfg.CORE_LLM_MODEL,
+                temperature=temperature if temperature is not None else cfg.LLM_TEMPERATURE,
+                max_tokens=max_tokens if max_tokens is not None else cfg.LLM_MAX_TOKENS,
             )
-            resp.raise_for_status()
-            return resp.json()["message"]["content"].strip()
+            response = llm.invoke(messages)
+
+            if isinstance(response.content, list):
+                return " ".join([part.get("text", "") for part in response.content]).strip()
+            else:
+                return response.content.strip()
         except Exception as exc:
-            logger.error(f"LLM chat failed: {exc}. Is Ollama running at {cfg.OLLAMA_BASE_URL}?")
+            logger.error(f"LLM chat failed: {exc}. Is Google GenAI API configured correctly?")
             raise
 
     def reformulate_query(
@@ -358,33 +357,60 @@ class LLMService:
         entities: List[str],
     ) -> str:
         """Use a smaller local model to rewrite the query for better retrieval."""
-        entity_str = ", ".join(entities) if entities else "none"
-        system = (
-            "You are a search query optimizer. "
-            "Rewrite the user's latest question into a concise, self-contained search query "
-            "that incorporates relevant context from the conversation. "
-            "Output ONLY the rewritten query, no explanation."
-        )
-        history_snippet = "\n".join(
-            f"{m['role'].capitalize()}: {m['content']}" for m in history[-4:]
-        )
-        user_msg = (
-            f"Conversation so far:\n{history_snippet}\n\n"
-            f"Known entities: {entity_str}\n\n"
-            f"Latest question: {query}\n\n"
-            "Rewritten query:"
-        )
-        return self.chat(
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user_msg},
-            ],
-            model=cfg.REFORMULATION_MODEL,
-            temperature=0.0,
-            max_tokens=128,
-        )
-
-
+        
+        # Filter to only user/assistant messages, exclude system/tool
+        clean_history = [
+            m for m in history 
+            if m.get("role") in ("user", "assistant")
+        ]
+        
+        # Take only recent relevant turns (2 exchanges = 4 messages)
+        recent = clean_history[-4:] if clean_history else []
+        
+        # Build entity instruction only if entities exist
+        entity_instruction = ""
+        if entities:
+            entity_instruction = f"\nImportant terms to include: {', '.join(entities[:5])}"
+        
+        # Simpler, more direct prompt
+        if recent:
+            history_text = "\n".join(
+                f"{'User' if m['role']=='user' else 'AI'}: {m['content'][:200]}"
+                for m in recent
+            )
+            user_msg = (
+                f"Previous conversation:\n{history_text}\n\n"
+                f"Current question: {query}"
+                f"{entity_instruction}\n\n"
+                f"Write a search query that works without the conversation context:"
+            )
+        else:
+            # No history = just return the query with entities if any
+            if entities:
+                return f"{query} {' '.join(entities[:3])}"
+            return query
+        
+        try:
+            result = self.chat(
+                messages=[
+                    {"role": "system", "content": "Rewrite questions as standalone search queries. Output only the query."},
+                    {"role": "user", "content": user_msg},
+                ],
+                model=cfg.REFORMULATION_MODEL,
+                temperature=0.1,  # NOT 0.0
+                max_tokens=100,
+            )
+            
+            # Fallback if model outputs garbage
+            if not result or len(result) < 3:
+                return query
+                
+            return result
+            
+        except Exception:
+            # Always have a fallback
+            return query
+    
 @lru_cache(maxsize=1)
 def get_llm() -> LLMService:
     return LLMService()
@@ -399,10 +425,10 @@ class VectorStoreService:
 
     def __init__(self) -> None:
         from qdrant_client import QdrantClient
-        logger.info(f"Connecting to Qdrant at {cfg.QDRANT_URL} …")
+        local_qdrant_path = cfg.QDRANT_PATH
+        logger.info(f"Connecting to Qdrant at {local_qdrant_path} …")
         self.client = QdrantClient(
-            url=cfg.QDRANT_URL,
-            api_key=cfg.QDRANT_API_KEY or None,
+            path=local_qdrant_path,
             timeout=30,
         )
         logger.info("Qdrant client ready.")
@@ -414,14 +440,15 @@ class VectorStoreService:
         """
         from qdrant_client.models import SearchRequest
 
-        results = self.client.search(
+        results = self.client.query_points(
             collection_name=cfg.QDRANT_COLLECTION,
-            query_vector=query_vec.tolist(),
+            query=query_vec.tolist(),
             limit=top_k,
             with_payload=True,
+            score_threshold=0.7,  # filter out low-similarity results  
         )
-        passages = [r.payload.get("text", "") for r in results]
-        sources = [r.payload.get("source", "unknown") for r in results]
+        passages = [r.payload.get("text", "") for r in results.points]
+        sources = [r.payload.get("source", "unknown") for r in results.points]
         return passages, sources
 
 

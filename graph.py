@@ -39,6 +39,9 @@ Full pipeline topology:
 
 from langgraph.graph import StateGraph, START, END
 from state import State
+from dotenv import load_dotenv
+
+load_dotenv()
 from nodes import (
     get_user_input,
     speech_to_text,
@@ -53,7 +56,6 @@ from nodes import (
     # routing functions
     route_after_input,
     route_after_input_safety,
-    route_after_retrieval,
     route_after_output_safety,
     route_after_handle_output,
 )
@@ -108,13 +110,8 @@ def build_graph() -> StateGraph:
     )
 
     # ── Conditional: cache hit → skip LLM ────────────────────────────────────
-    builder.add_conditional_edges(
-        "retrieve_context",
-        route_after_retrieval,
-        {
-            "check_output_vulnerability": "check_output_vulnerability",
-            "create_response":            "create_response",
-        },
+    builder.add_edge(
+        "retrieve_context", "create_response"
     )
 
     # ── LLM → output safety ───────────────────────────────────────────────────

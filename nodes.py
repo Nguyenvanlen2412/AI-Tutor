@@ -19,6 +19,9 @@ import logging
 import time
 import uuid
 from typing import List
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from state import State
 from config import cfg
@@ -52,6 +55,10 @@ Instructions:
 - If context is provided in the material, prioritize using that information.
 
 - Cite sources if necessary.
+
+- Do not add emojis.
+
+- Do not give external links, but you can suggest topics or keywords for the student to research on their own.
 
 - If unsure, be upfront and suggest the student consult additional resources.
 
@@ -221,7 +228,7 @@ def retrieve_context(state: State) -> State:
     # ── b) Query reformulation ─────────────────────────────────────────────────
     llm = get_llm()
     rewritten = llm.reformulate_query(query, history, entities)
-    logger.info(f"[retrieve_context] rewritten_query='{rewritten[:100]}'")
+    logger.info(f"[retrieve_context] rewritten_query='{rewritten}'")
 
     # ── c) Embed ───────────────────────────────────────────────────────────────
     embedder = get_embedder()
@@ -423,12 +430,6 @@ def route_after_input_safety(state: State) -> str:
     if state.get("input_safety_status") == "unsafe":
         return "handle_input_vulnerability"
     return "retrieve_context"
-
-
-def route_after_retrieval(state: State) -> str:
-    """Skip LLM when Redis cache returned a hit."""
-    return "create_response"
-
 
 def route_after_output_safety(state: State) -> str:
     """

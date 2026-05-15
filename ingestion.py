@@ -10,7 +10,7 @@ Pipeline:
   1. Discover files in --docs directory (recursive).
   2. Load each file with the appropriate LangChain document loader.
   3. Split into chunks with RecursiveCharacterTextSplitter.
-  4. Embed each chunk with BGE-M3.
+  4. Embed each chunk with BGE-large-en-v1.5.
   5. Upsert to Qdrant with source metadata.
 """
 

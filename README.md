@@ -77,10 +77,13 @@ python main.py --query "Giải thích định lý Pythagoras"
 
 # Voice input
 python main.py --voice lecture.wav --output voice
+
+
+uvicorn server:app --host 0.0.0.0 --port 8080 --reload
+http://localhost:8080
 ```
 
 ---
-
 ## Environment variables (`.env`)
 
 ```dotenv
@@ -101,7 +104,6 @@ RERANKER_MODEL=BAAI/bge-reranker-v2-m3
 EMBEDDING_DEVICE=cpu
 
 # Qdrant
-QDRANT_URL=http://localhost:6333
 QDRANT_COLLECTION=ai_tutor_docs
 
 # Redis
