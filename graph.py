@@ -1,6 +1,11 @@
 """
 graph.py – assembles the AI Tutor LangGraph StateGraph.
 
+Latency improvement vs original:
+  [PERF] retrieve_context → create_response is now a conditional edge.
+         On a semantic cache hit, the graph jumps directly to
+         check_output_vulnerability, bypassing create_response entirely.
+
 Full pipeline topology:
 
   START
@@ -13,7 +18,7 @@ Full pipeline topology:
     │ (text) ──────────────┘
     │
     ▼
-  check_input_vulnerability
+  check_input_vulnerability          ← safety check + memory prefetch in parallel
     │
     ├─ (unsafe) ──► handle_input_vulnerability ──┐
     │                                             │
@@ -21,20 +26,20 @@ Full pipeline topology:
     ▼                                               │
   retrieve_context                                  │
     │                                               │
-    ├─ (cache hit) ──────────────────────────────┐  │
-    │                                            │  │
-    │ (cache miss) ──► create_response ──────────┘  │
+    ├─ (cache hit) ───────────────────────────────┐ │
+    │                                             │ │
+    │ (cache miss) ──► create_response ───────────┘ │
     │                                               │
     ▼                                               │
   check_output_vulnerability  ◄──────────────────────┘
-    │
+    │                              ← output safety check + TTS synthesis in parallel
     ├─ (unsafe & retries) ──► handle_output_vulnerability
     │                                  │
     │                     ┌─ (retries left) ──► create_response (loop)
-    │                     └─ (exhausted)   ──► text_to_speech | save_context
+    │                     └─ (exhausted)   ──► text_to_speech
     │
-    │ (safe, voice) ──► text_to_speech ──► save_context ──► END
-    │ (safe, text)  ──────────────────────► save_context ──► END
+    │ (safe) ──► text_to_speech ──► END
+    │              (no-op if audio already generated above)
 """
 
 from langgraph.graph import StateGraph, START, END
@@ -42,6 +47,7 @@ from state import State
 from dotenv import load_dotenv
 
 load_dotenv()
+
 from nodes import (
     get_user_input,
     speech_to_text,
@@ -56,6 +62,7 @@ from nodes import (
     # routing functions
     route_after_input,
     route_after_input_safety,
+    route_after_retrieve,          # [NEW] cache-hit shortcut
     route_after_output_safety,
     route_after_handle_output,
 )
@@ -66,16 +73,16 @@ def build_graph() -> StateGraph:
     builder = StateGraph(State)
 
     # ── Register nodes ─────────────────────────────────────────────────────────
-    builder.add_node("get_user_input",            get_user_input)
-    builder.add_node("speech_to_text",            speech_to_text)
-    builder.add_node("check_input_vulnerability", check_input_vulnerability)
-    builder.add_node("handle_input_vulnerability",handle_input_vulnerability)
-    builder.add_node("retrieve_context",          retrieve_context)
-    builder.add_node("create_response",           create_response)
-    builder.add_node("check_output_vulnerability",check_output_vulnerability)
+    builder.add_node("get_user_input",             get_user_input)
+    builder.add_node("speech_to_text",             speech_to_text)
+    builder.add_node("check_input_vulnerability",  check_input_vulnerability)
+    builder.add_node("handle_input_vulnerability", handle_input_vulnerability)
+    builder.add_node("retrieve_context",           retrieve_context)
+    builder.add_node("create_response",            create_response)
+    builder.add_node("check_output_vulnerability", check_output_vulnerability)
     builder.add_node("handle_output_vulnerability",handle_output_vulnerability)
-    builder.add_node("text_to_speech",            text_to_speech)
-    builder.add_node("save_context",              save_context)
+    builder.add_node("text_to_speech",             text_to_speech)
+    builder.add_node("save_context",               save_context)
 
     # ── Entry point ────────────────────────────────────────────────────────────
     builder.add_edge(START, "get_user_input")
@@ -90,10 +97,10 @@ def build_graph() -> StateGraph:
         },
     )
 
-    # ── STT always feeds into safety check ───────────────────────────────────
+    # ── STT always feeds into safety check ────────────────────────────────────
     builder.add_edge("speech_to_text", "check_input_vulnerability")
 
-    # ── Conditional: safe vs unsafe input ────────────────────────────────────
+    # ── Conditional: safe vs unsafe input ─────────────────────────────────────
     builder.add_conditional_edges(
         "check_input_vulnerability",
         route_after_input_safety,
@@ -103,27 +110,31 @@ def build_graph() -> StateGraph:
         },
     )
 
-    # ── Blocked input: bypass LLM, go straight to TTS or save ────────────────
-    # (handle_input_vulnerability sets output_safety_status="safe" on the fallback)
-    builder.add_edge(
-        "handle_input_vulnerability",            "text_to_speech"
+    # ── Blocked input: jump straight to TTS ───────────────────────────────────
+    builder.add_edge("handle_input_vulnerability", "text_to_speech")
+
+    # ── Conditional: cache hit → skip LLM  |  cache miss → LLM  ──────────────
+    # [PERF] Previously an unconditional edge to create_response.
+    builder.add_conditional_edges(
+        "retrieve_context",
+        route_after_retrieve,
+        {
+            "create_response":            "create_response",
+            "check_output_vulnerability": "check_output_vulnerability",
+        },
     )
 
-    # ── Conditional: cache hit → skip LLM ────────────────────────────────────
-    builder.add_edge(
-        "retrieve_context", "create_response"
-    )
-
-    # ── LLM → output safety ───────────────────────────────────────────────────
+    # ── LLM → output safety (+ parallel TTS) ──────────────────────────────────
     builder.add_edge("create_response", "check_output_vulnerability")
 
-    # ── Conditional: safe output → TTS/save  |  unsafe → regen loop ─────────
+    # ── Conditional: safe output → TTS  |  unsafe → regen loop ───────────────
     builder.add_conditional_edges(
         "check_output_vulnerability",
         route_after_output_safety,
         {
             "handle_output_vulnerability": "handle_output_vulnerability",
-            "text_to_speech":              "text_to_speech",        },
+            "text_to_speech":              "text_to_speech",
+        },
     )
 
     # ── Regen loop: try again OR fall through ─────────────────────────────────
@@ -131,15 +142,13 @@ def build_graph() -> StateGraph:
         "handle_output_vulnerability",
         route_after_handle_output,
         {
-            "create_response":  "create_response",
-            "text_to_speech":   "text_to_speech",        },
+            "create_response": "create_response",
+            "text_to_speech":  "text_to_speech",
+        },
     )
 
-    # ── TTS → save ────────────────────────────────────────────────────────────
-    builder.add_edge("text_to_speech", "save_context")
-
-    # ── Terminal ──────────────────────────────────────────────────────────────
-    builder.add_edge("save_context", END)
+    # ── TTS → Terminal ─────────────────────────────────────────────────────────
+    builder.add_edge("text_to_speech", END)
 
     return builder.compile()
 
@@ -152,4 +161,3 @@ graph_image = tutor_graph.get_graph(xray=True).draw_mermaid_png()
 with open("tutor_graph.png", "wb") as f:
     f.write(graph_image)
 print("Graph saved to tutor_graph.png")
-

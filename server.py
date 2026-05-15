@@ -22,7 +22,7 @@ import uuid
 from typing import Optional
 
 import redis as redis_lib
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -30,6 +30,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 
 from config import cfg
+from nodes import save_context
 from graph import tutor_graph
 from state import State
 
@@ -155,6 +156,7 @@ async def delete_session(session_id: str):
 
 @app.post("/api/chat")
 async def chat(
+    background_tasks: BackgroundTasks,
     session_id: str = Form(...),
     user_id: str = Form(default="user"),
     text: Optional[str] = Form(default=None),
@@ -199,11 +201,14 @@ async def chat(
     # ── Run LangGraph ─────────────────────────────────────────────────────────
     t0 = time.monotonic()
     try:
-        final: State = tutor_graph.invoke(initial)
+        final: State = await tutor_graph.ainvoke(initial)
     except Exception as exc:
         logger.exception("Graph invocation failed")
         raise HTTPException(status_code=500, detail=str(exc))
     latency_ms = int((time.monotonic() - t0) * 1000)
+
+    # ── Save context in background ────────────────────────────────────────────
+    background_tasks.add_task(save_context, final)
 
     # ── Encode audio to base64 ────────────────────────────────────────────────
     audio_b64: Optional[str] = None

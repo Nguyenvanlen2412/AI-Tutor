@@ -23,6 +23,10 @@ class State(TypedDict, total=False):
     output_safety_status: Literal["pending", "safe", "unsafe"]
     blocked_reason: str              # Llama Guard category string if flagged
 
+    # ── SEMANTIC CACHE ─────────────────────────────────────────────────────────
+    is_cache_hit: bool              # True if response came from Redis cache
+    cached_response: Optional[str]   # Cached LLM response if is_cache_hit is True
+    cached_sources: Optional[List[str]]  # Cached sources list if is_cache_hit is True
     # ── QUERY PROCESSING ───────────────────────────────────────────────────────
     rewritten_query: str             # reformulated query from Gemma 3B
 
