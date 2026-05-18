@@ -28,7 +28,7 @@ Voice/Text Input
        │
   [BGE-Reranker-v2-m3]   ←─ cross-encoder re-ranking
        │
-  [Zep Memory]  ←─ conversation history + auto-summary + entities
+  [Redis Memory]  ←─ conversation history + auto-summary + entities
        │
   [Core LLM – Gemma / custom]  ←─ response generation (via Ollama)
        │
@@ -36,7 +36,7 @@ Voice/Text Input
        │
   [Kokoro TTS / Zalo TTS]  ←─ text-to-speech (if voice output)
        │
-  [Redis + Zep]  ←─ cache + memory update
+  [Redis]  ←─ cache + memory update
        │
      Response
 ```
@@ -50,13 +50,12 @@ Voice/Text Input
 | **Ollama** | 11434 | `ollama serve` then `ollama pull gemma3:4b` and `ollama pull llama-guard3:1b` |
 | **Qdrant** | 6333 | `docker run -p 6333:6333 qdrant/qdrant` |
 | **Redis Stack** | 6379 | `docker run -p 6379:6379 redis/redis-stack-server` |
-| **Zep** | 8000 | See [getzep.com/docs](https://docs.getzep.com/deployment/docker/) |
 
 ---
 
 ## Quick start
 
-```bash
+```
 # 1. Create virtual environment
 python -m venv .venv && source .venv/bin/activate
 
@@ -75,10 +74,7 @@ python main.py
 # One-shot text query
 python main.py --query "Giải thích định lý Pythagoras"
 
-# Voice input
-python main.py --voice lecture.wav --output voice
-
-
+#start server
 uvicorn server:app --host 0.0.0.0 --port 8080 --reload
 http://localhost:8080
 ```
@@ -89,13 +85,11 @@ http://localhost:8080
 ```dotenv
 # Whisper
 WHISPER_MODEL=base
-WHISPER_LANGUAGE=vi
+WHISPER_LANGUAGE=en
 WHISPER_DEVICE=cpu
 
 # Ollama models
 OLLAMA_BASE_URL=http://localhost:11434
-CORE_LLM_MODEL=gemma3:1b
-REFORMULATION_MODEL=gemma3:270m
 LLAMA_GUARD_MODEL=llama-guard3:1b
 
 # Embeddings
@@ -120,33 +114,3 @@ ZALO_TTS_API_KEY=           # only needed for zalo backend
 # Safety
 MAX_REGENERATIONS=3
 ```
-
----
-
-## File overview
-
-```
-ai_tutor/
-├── requirements.txt   – all Python dependencies
-├── config.py          – centralised configuration (env-aware)
-├── state.py           – LangGraph State TypedDict
-├── services.py        – lazy-loaded service singletons
-│                        (VAD, STT, TTS, Embedder, Reranker,
-│                         Safety, LLM, VectorStore, Cache, Memory)
-├── nodes.py           – all 10 LangGraph node functions
-│                        + conditional-edge routing functions
-├── graph.py           – StateGraph assembly and compilation
-├── ingestion.py       – document ingestion CLI
-│                        (load → split → embed → upsert Qdrant)
-└── main.py            – CLI entry point + public API functions
-```
-
----
-
-## Adding more languages
-
-* **STT**: set `WHISPER_LANGUAGE=vi` (or any Whisper-supported code).
-* **TTS**: set `TTS_BACKEND=zalo` with your Zalo TTS API key for Vietnamese.
-* **Embedding**: BGE-M3 is natively multilingual – no changes needed.
-* **LLM**: switch `CORE_LLM_MODEL` to a Vietnamese-capable model
-  (e.g. `vinai/PhoGPT-7B5-Instruct` served via Ollama or vLLM).
