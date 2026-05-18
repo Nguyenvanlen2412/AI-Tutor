@@ -9,6 +9,8 @@ Latency improvements vs original:
   [PERF]     MemoryService.add_turn runs summarize + entity extraction in parallel.
   [NEW]      SemanticCacheService – Redis-backed vector similarity cache. Cache hits skip
              query reformulation, Qdrant, reranking, and the core LLM entirely (~800-1500 ms saved).
+  [NEW]      LLMService.stream_chat – async generator for token-by-token streaming via astream().
+  [NEW]      TTSService.synthesize_sentence – thin alias kept for clarity; same as synthesize().
 """
 
 from __future__ import annotations
@@ -22,7 +24,7 @@ import struct
 import tempfile
 import time
 from functools import lru_cache
-from typing import List, Optional, Tuple
+from typing import AsyncGenerator, List, Optional, Tuple
 
 import numpy as np
 import httpx
@@ -166,6 +168,11 @@ class TTSService:
             return await self._zalo(text)
         else:
             raise ValueError(f"Unknown TTS backend: {self.backend}")
+
+    # Thin alias used by the streaming pipeline for clarity.
+    async def synthesize_sentence(self, sentence: str) -> bytes:
+        """Synthesize a single sentence; identical to synthesize() but named for intent."""
+        return await self.synthesize(sentence)
 
     def _kokoro(self, text: str) -> bytes:
         import soundfile as sf
@@ -376,6 +383,49 @@ class LLMService:
             return response.content.strip()
         except Exception as exc:
             logger.error(f"LLM chat failed: {exc}.")
+            raise
+
+    # ── [NEW] Streaming variant ───────────────────────────────────────────────
+    async def stream_chat(
+        self,
+        messages: List[dict],
+        model: Optional[str] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+    ) -> AsyncGenerator[str, None]:
+        """
+        Async generator that yields text tokens from the LLM as they arrive.
+
+        Uses LangChain's .astream() on the cached ChatGoogleGenerativeAI client,
+        so the HTTP connection is reused and there is no per-call re-initialisation.
+
+        Typical usage:
+            async for token in llm.stream_chat(messages):
+                buffer += token
+        """
+        llm = _get_google_client(
+            model=model or cfg.CORE_LLM_MODEL,
+            temperature=temperature if temperature is not None else cfg.LLM_TEMPERATURE,
+            max_tokens=max_tokens if max_tokens is not None else cfg.LLM_MAX_TOKENS,
+        )
+        try:
+            async for chunk in llm.astream(messages):
+                content = chunk.content
+                if not content:
+                    continue
+                # content can be a string or a list of typed parts (multimodal)
+                if isinstance(content, list):
+                    for part in content:
+                        if isinstance(part, dict):
+                            text = part.get("text", "")
+                        else:
+                            text = str(part)
+                        if text:
+                            yield text
+                else:
+                    yield content
+        except Exception as exc:
+            logger.error(f"[LLMService.stream_chat] Streaming failed: {exc}")
             raise
 
     async def reformulate_query(
