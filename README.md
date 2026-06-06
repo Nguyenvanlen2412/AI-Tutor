@@ -1,6 +1,6 @@
-# 🎓 AI Tutor
+# 🎓 Computer Science Mentor
 
-An intelligent, voice-enabled AI tutoring system built on **LangGraph** that combines Retrieval-Augmented Generation (RAG), multi-layer safety guardrails, semantic caching, and real-time sentence-level streaming with Text-to-Speech synthesis.
+An intelligent, voice-enabled AI mentoring system built on **LangGraph** that combines Retrieval-Augmented Generation (RAG), multi-layer safety guardrails, semantic caching, and real-time sentence-level streaming with Text-to-Speech synthesis.
 
 <!-- TODO: Add a hero banner / screenshot here -->
 <img width="2864" height="1638" alt="image" src="https://github.com/user-attachments/assets/df6de4e8-76f1-46f9-983d-8576f21314d9" />
@@ -51,7 +51,7 @@ An intelligent, voice-enabled AI tutoring system built on **LangGraph** that com
 
 ## Overview
 
-AI Tutor is a full-stack conversational tutoring system designed to help students learn through natural dialogue — via text or voice. It retrieves relevant knowledge from an ingested document corpus, generates pedagogically-oriented responses with a large language model, and optionally reads the answer aloud using neural TTS.
+Computer Science Mentor is a full-stack conversational tutoring system designed to help students learn through natural dialogue — via text or voice. It retrieves relevant knowledge from an ingested document corpus, generates pedagogically-oriented responses with a large language model, and optionally reads the answer aloud using neural TTS.
 
 The system is designed around a **LangGraph state machine** that orchestrates a multi-step pipeline: input processing → safety filtering → context retrieval → response generation → output safety → speech synthesis. Every step is asynchronous and several steps run in parallel to minimise end-to-end latency.
 
@@ -187,7 +187,7 @@ The LangGraph state machine is automatically exported as a PNG image when the gr
 ## Project Structure
 
 ```
-AI tutor/
+Computer Science Mentor/
 ├── config.py             # Centralised configuration (dataclass + env vars)
 ├── state.py              # LangGraph State TypedDict definition
 ├── graph.py              # LangGraph StateGraph construction & compilation
@@ -538,7 +538,7 @@ Same form fields as `/api/chat`. Returns a `text/event-stream` response with sen
 The `ingestion/` directory contains a Jupyter notebook for processing and indexing documents into the Qdrant vector store.
 
 ### Default Knowledge Base (Source Documents)
-This AI Tutor was initially built and tested using the following datasets to provide deep technical expertise. You can download and place these to replicate the base knowledge:
+This Computer Science Mentor was initially built and tested using the following datasets to provide deep technical expertise. You can download and place these to replicate the base knowledge:
 * **[500+ Data Engineering Interview Questions and Answers](https://github.com/vishnu-u/Data-Science-Library/blob/main/500%2B%20Data%20Engineering%20Interview%20Questions%20and%20Answers.pdf)**: Comprehensive Q&A covering modern DE tools, data modeling, architecture, and SQL.
 * **[Computer Science Theory QA Dataset](https://www.kaggle.com/datasets/mujtabamatin/computer-science-theory-qa-dataset)**: Foundational computer science concepts, algorithms, and data structures.
 
