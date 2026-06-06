@@ -608,7 +608,54 @@ async function runStreamingChat(formData){
   }
 }
 
-/* ── Send text (streaming) ─────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   NON-STREAMING (BATCH) CHAT
+   ═══════════════════════════════════════════════════════════════ */
+
+async function runBatchChat(formData){
+  try{
+    const response=await fetch(API+'/api/chat',{
+      method:'POST',
+      body:formData,
+    });
+
+    if(!response.ok){
+      hideThinking();
+      appendMessage('ai','⚠ Server error: '+response.status);
+      return;
+    }
+
+    hideThinking();
+    const data=await response.json();
+
+    if(data.safety_blocked){
+      appendMessage('ai','⚠ Your message was blocked by the safety filter.');
+      return;
+    }
+
+    appendMessage(
+      'ai',
+      data.response || data.error || 'No response received.',
+      data.audio_b64 || null,
+      data.sources || [],
+      data.is_cache_hit || false,
+      data.latency_ms || null
+    );
+
+    await loadSessions();
+  }catch(e){
+    console.error('[batch] fetch error',e);
+    hideThinking();
+    appendMessage('ai','⚠ Connection error. Is the server running?');
+  }
+}
+
+/* ── Helpers ───────────────────────────────────────────────── */
+function isStreamingMode(){
+  return $('stream-toggle').checked;
+}
+
+/* ── Send text ─────────────────────────────────────────────── */
 async function sendText(){
   if(isBusy||!currentSessionId) return;
   const input=$('text-input');
@@ -626,7 +673,11 @@ async function sendText(){
   fd.append('user_id','user');
   fd.append('text', text);
 
-  await runStreamingChat(fd);
+  if(isStreamingMode()){
+    await runStreamingChat(fd);
+  } else {
+    await runBatchChat(fd);
+  }
 
   isBusy=false; $('btn-send').disabled=false; setStatus('Ready');
 }
@@ -691,9 +742,13 @@ async function handleRecordingStop(stream){
   fd.append('user_id','user');
   fd.append('audio', blob, 'recording.webm');
 
-  // The "transcript" SSE event will update the user bubble automatically
-  // inside runStreamingChat via the event handler above.
-  await runStreamingChat(fd);
+  if(isStreamingMode()){
+    // The "transcript" SSE event will update the user bubble automatically
+    // inside runStreamingChat via the event handler above.
+    await runStreamingChat(fd);
+  } else {
+    await runBatchChat(fd);
+  }
 
   isBusy=false; $('btn-send').disabled=false; setStatus('Ready');
 }
@@ -711,6 +766,19 @@ $('text-input').addEventListener('keydown',e=>{
   if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendText(); }
 });
 $('text-input').addEventListener('input',()=>autoGrow($('text-input')));
+
+/* ── Stream toggle label update ────────────────────────────── */
+$('stream-toggle').addEventListener('change', function(){
+  const label=$('toggle-text');
+  const icon=$('toggle-icon-stream');
+  if(this.checked){
+    label.textContent='Streaming';
+    icon.innerHTML='<path d="M2 12h4l3-9 4 18 3-9h4"/>';
+  } else {
+    label.textContent='Standard';
+    icon.innerHTML='<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12h6"/><path d="M12 9v6"/>';
+  }
+});
 
 /* ── Required CSS for streaming additions ──────────────────── */
 (function injectStreamCSS(){
