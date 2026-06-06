@@ -537,6 +537,11 @@ Same form fields as `/api/chat`. Returns a `text/event-stream` response with sen
 
 The `ingestion/` directory contains a Jupyter notebook for processing and indexing documents into the Qdrant vector store.
 
+### Default Knowledge Base (Source Documents)
+This AI Tutor was initially built and tested using the following datasets to provide deep technical expertise. You can download and place these to replicate the base knowledge:
+* **[500+ Data Engineering Interview Questions and Answers](https://github.com/vishnu-u/Data-Science-Library/blob/main/500%2B%20Data%20Engineering%20Interview%20Questions%20and%20Answers.pdf)**: Comprehensive Q&A covering modern DE tools, data modeling, architecture, and SQL.
+* **[Computer Science Theory QA Dataset](https://www.kaggle.com/datasets/mujtabamatin/computer-science-theory-qa-dataset)**: Foundational computer science concepts, algorithms, and data structures.
+
 **Supported formats:** PDF, DOCX, Markdown, and plain text (via `pypdf`, `python-docx`, `unstructured`, `markdown`).
 
 **Chunking configuration:**
