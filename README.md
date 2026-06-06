@@ -3,6 +3,7 @@
 An intelligent, voice-enabled AI tutoring system built on **LangGraph** that combines Retrieval-Augmented Generation (RAG), multi-layer safety guardrails, semantic caching, and real-time sentence-level streaming with Text-to-Speech synthesis.
 
 <!-- TODO: Add a hero banner / screenshot here -->
+<img width="2864" height="1638" alt="image" src="https://github.com/user-attachments/assets/df6de4e8-76f1-46f9-983d-8576f21314d9" />
 
 ---
 
@@ -158,6 +159,7 @@ The `State` type is defined in [`state.py`](state.py) as a `TypedDict` with ~25 
 The LangGraph state machine is automatically exported as a PNG image when the graph module is imported.
 
 <!-- TODO: Add the tutor_graph.png image here -->
+<img width="1316" height="1529" alt="image" src="https://github.com/user-attachments/assets/4813db20-4bee-44e8-8c3d-5b50a946d6d7" />
 
 <!-- ![AI Tutor LangGraph](tutor_graph.png) -->
 
