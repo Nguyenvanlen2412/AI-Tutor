@@ -3,7 +3,7 @@
 An intelligent, voice-enabled AI mentoring system built on **LangGraph** that combines Retrieval-Augmented Generation (RAG), multi-layer safety guardrails, semantic caching, and real-time sentence-level streaming with Text-to-Speech synthesis.
 
 <!-- TODO: Add a hero banner / screenshot here -->
-<img width="2864" height="1638" alt="image" src="https://github.com/user-attachments/assets/df6de4e8-76f1-46f9-983d-8576f21314d9" />
+<img width="2876" height="1635" alt="image" src="https://github.com/user-attachments/assets/b411f135-c049-489b-8901-f8da52f1fb1e" />
 
 ---
 
