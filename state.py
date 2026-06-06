@@ -1,6 +1,3 @@
-"""
-state.py – typed state shared across all LangGraph nodes.
-"""
 
 from typing import TypedDict, Optional, List, Dict, Literal, Any
 

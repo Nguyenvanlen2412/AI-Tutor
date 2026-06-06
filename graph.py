@@ -1,46 +1,4 @@
-"""
-graph.py – assembles the AI Tutor LangGraph StateGraph.
 
-Latency improvement vs original:
-  [PERF] retrieve_context → create_response is now a conditional edge.
-         On a semantic cache hit, the graph jumps directly to
-         check_output_vulnerability, bypassing create_response entirely.
-
-Full pipeline topology:
-
-  START
-    │
-    ▼
-  get_user_input
-    │
-    ├─ (voice) ──► speech_to_text
-    │                     │
-    │ (text) ──────────────┘
-    │
-    ▼
-  check_input_vulnerability          ← safety check + memory prefetch in parallel
-    │
-    ├─ (unsafe) ──► handle_input_vulnerability ──┐
-    │                                             │
-    │ (safe) ──────────────────────────────────────┐
-    ▼                                               │
-  retrieve_context                                  │
-    │                                               │
-    ├─ (cache hit) ───────────────────────────────┐ │
-    │                                             │ │
-    │ (cache miss) ──► create_response ───────────┘ │
-    │                                               │
-    ▼                                               │
-  check_output_vulnerability  ◄──────────────────────┘
-    │                              ← output safety check + TTS synthesis in parallel
-    ├─ (unsafe & retries) ──► handle_output_vulnerability
-    │                                  │
-    │                     ┌─ (retries left) ──► create_response (loop)
-    │                     └─ (exhausted)   ──► text_to_speech
-    │
-    │ (safe) ──► text_to_speech ──► END
-    │              (no-op if audio already generated above)
-"""
 
 from langgraph.graph import StateGraph, START, END
 from state import State

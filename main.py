@@ -1,17 +1,3 @@
-"""
-main.py – interactive demo / programmatic entry point for the AI Tutor.
-
-CLI usage:
-    # Text mode (default)
-    python main.py
-
-    # Voice mode  (pipe a WAV file)
-    python main.py --voice path/to/audio.wav --output voice
-
-    # Headless / one-shot
-    python main.py --query "Hãy giải thích định lý Pythagoras" --user-id student_42
-"""
-
 from __future__ import annotations
 
 import argparse

@@ -1,34 +1,4 @@
-"""
-nodes.py – every LangGraph node for the AI Tutor pipeline.
 
-Latency improvements vs original:
-  [FIX]   speech_to_text – single temp file shared between VAD and STT (saves one disk write).
-  [PERF]  check_input_vulnerability – safety check + Redis memory load run in parallel via
-          asyncio.gather. Memory is stored in state so retrieve_context skips the Redis call.
-  [PERF]  retrieve_context – checks semantic cache before touching the LLM/Qdrant/reranker.
-          On a cache hit the node sets llm_response and is_cache_hit=True; the graph then
-          routes directly to check_output_vulnerability, skipping create_response entirely.
-          Also reuses the embedding computed for cache lookup when the query isn't reformulated.
-  [PERF]  check_output_vulnerability – TTS synthesis runs in parallel with the safety check
-          via asyncio.gather. For the 99%+ of responses that pass safety, audio is ready
-          before the safety verdict arrives, so text_to_speech becomes a no-op.
-  [PERF]  text_to_speech – returns immediately when audio was already produced in parallel.
-  [PERF]  save_context – stores the turn's query vector in the semantic cache so future
-          similar questions get instant responses (runs as a background task in server.py).
-  [NEW]   route_after_retrieve – routing function for the cache-hit shortcut in graph.py.
-
-Node execution order (see graph.py for edges):
-  get_user_input
-    ↓ (voice?) speech_to_text      [shares one temp file for VAD+STT]
-  check_input_vulnerability         [parallel: safety check + memory prefetch]
-    ↓ (unsafe?) handle_input_vulnerability
-  retrieve_context                  [semantic cache check; uses prefetched memory]
-    ↓ (cache miss) create_response
-  check_output_vulnerability        [parallel: safety check + TTS synthesis]
-    ↓ (unsafe & retries?) handle_output_vulnerability → create_response (loop)
-  text_to_speech                    [no-op if audio already generated above]
-  save_context                      [stores in semantic cache; runs as background task]
-"""
 
 from __future__ import annotations
 

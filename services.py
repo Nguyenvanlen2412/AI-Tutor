@@ -1,18 +1,3 @@
-"""
-services.py – lazy-loaded singleton wrappers around every external service.
-
-Latency improvements vs original:
-  [FIX]      STTService.transcribe – missing `return` statement (voice was silently broken).
-  [PERF]     VADService + STTService share temp file via detect_from_path / transcribe_from_path.
-  [PERF]     LLMService caches ChatGoogleGenerativeAI instances; avoids re-init on every call.
-  [PERF]     MemoryService.get_memory uses a Redis pipeline (1 round-trip instead of 3).
-  [PERF]     MemoryService.add_turn runs summarize + entity extraction in parallel.
-  [NEW]      SemanticCacheService – Redis-backed vector similarity cache. Cache hits skip
-             query reformulation, Qdrant, reranking, and the core LLM entirely (~800-1500 ms saved).
-  [NEW]      LLMService.stream_chat – async generator for token-by-token streaming via astream().
-  [NEW]      TTSService.synthesize_sentence – thin alias kept for clarity; same as synthesize().
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -164,8 +149,6 @@ class TTSService:
         """Return raw WAV bytes for *text*."""
         if self.backend == "kokoro":
             return await asyncio.to_thread(self._kokoro, text)
-        elif self.backend == "zalo":
-            return await self._zalo(text)
         else:
             raise ValueError(f"Unknown TTS backend: {self.backend}")
 
@@ -190,23 +173,6 @@ class TTSService:
         buf = io.BytesIO()
         sf.write(buf, audio, cfg.TTS_SAMPLE_RATE, format="WAV")
         return buf.getvalue()
-
-    async def _zalo(self, text: str) -> bytes:
-        async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.post(
-                "https://api.zalo.ai/v1/tts/synthesize",
-                headers={
-                    "apikey": cfg.ZALO_TTS_API_KEY,
-                    "Content-Type": "application/x-www-form-urlencoded",
-                },
-                data={"input": text, "speakerId": cfg.ZALO_TTS_SPEAKER_ID},
-            )
-        resp.raise_for_status()
-        audio_url = resp.json()["data"]["url"]
-        async with httpx.AsyncClient(timeout=30) as client:
-            audio_resp = await client.get(audio_url)
-        audio_resp.raise_for_status()
-        return audio_resp.content
 
 
 @lru_cache(maxsize=1)
@@ -500,7 +466,6 @@ def get_llm() -> LLMService:
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 class VectorStoreService:
-    """Hybrid search (dense + BM25 sparse) via Qdrant."""
 
     def __init__(self) -> None:
         from qdrant_client import QdrantClient
