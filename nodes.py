@@ -97,30 +97,72 @@ async def get_user_input(state: State) -> State:
 # 2. speech_to_text  (only reached when input_format == "voice")
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+def _convert_to_wav(input_path: str, output_path: str) -> None:
+    """Convert any audio format to 16 kHz mono PCM WAV using PyAV.
+
+    The browser's MediaRecorder produces WebM/Opus audio, but Silero VAD
+    (torchaudio / soundfile backend) requires actual WAV files.  PyAV bundles
+    its own ffmpeg libraries so no external ffmpeg install is needed.
+    """
+    import av
+    import wave
+    import struct as _struct
+
+    inp = av.open(input_path)
+    resampler = av.AudioResampler(
+        format="s16",           # 16-bit signed PCM
+        layout="mono",          # single channel
+        rate=cfg.VAD_SAMPLE_RATE,  # 16 000 Hz
+    )
+
+    pcm_frames: list[bytes] = []
+    for frame in inp.decode(audio=0):
+        for resampled in resampler.resample(frame):
+            pcm_frames.append(bytes(resampled.planes[0]))
+    inp.close()
+
+    # Write a standard PCM WAV file
+    with wave.open(output_path, "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)           # 16-bit = 2 bytes
+        wf.setframerate(cfg.VAD_SAMPLE_RATE)
+        wf.writeframes(b"".join(pcm_frames))
+
+
 async def speech_to_text(state: State) -> State:
     """
-    1. Write audio bytes to ONE temp file (shared between VAD and STT).
-    2. Run Silero VAD via detect_from_path.
-    3. If speech detected, transcribe with Whisper via transcribe_from_path.
+    1. Write raw audio bytes (typically WebM from the browser) to a temp file.
+    2. Convert to 16 kHz mono PCM WAV via ffmpeg (Windows-safe; no sox needed).
+    3. Run Silero VAD via detect_from_path.
+    4. If speech detected, transcribe with Whisper via transcribe_from_path.
 
-    [PERF] The original code wrote a separate temp file in VAD.detect() AND
-    again in STTService.transcribe(), causing two identical disk writes per
-    voice request. Now a single temp file is created here and passed to both.
+    [PERF] A single converted WAV file is shared between VAD and STT.
+    [FIX] The browser sends WebM/Opus audio, but Silero VAD (torchaudio on
+    Windows) and soundfile only support WAV/FLAC/OGG.  ffmpeg handles the
+    conversion reliably on all platforms.
     """
     audio_bytes: bytes = state.get("raw_audio", b"")
     if not audio_bytes:
         logger.warning("[speech_to_text] No audio bytes found.")
         return {**state, "error_message": "No audio provided.", "vad_detected": False}
 
-    # Write the shared temp file once
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+    # Write raw browser audio to a temp file (keep original extension for ffmpeg
+    # auto-detection; .webm is the default from MediaRecorder).
+    with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as f:
         f.write(audio_bytes)
-        tmp_path = f.name
+        raw_path = f.name
+
+    # Prepare the output WAV path
+    wav_path = raw_path.replace(".webm", ".wav")
 
     try:
+        # ── Convert to proper PCM WAV ─────────────────────────────────────────
+        await asyncio.to_thread(_convert_to_wav, raw_path, wav_path)
+        logger.info("[speech_to_text] Audio converted to PCM WAV via ffmpeg.")
+
         # ── VAD ───────────────────────────────────────────────────────────────
         vad = get_vad()
-        detected = await asyncio.to_thread(vad.detect_from_path, tmp_path)
+        detected = await asyncio.to_thread(vad.detect_from_path, wav_path)
         logger.info(f"[speech_to_text] VAD detected={detected}")
 
         if not detected:
@@ -132,16 +174,21 @@ async def speech_to_text(state: State) -> State:
                 "error_message":         "No speech detected in audio.",
             }
 
-        # ── STT (reuses the same temp file) ───────────────────────────────────
+        # ── STT (reuses the same converted WAV file) ──────────────────────────
         stt = get_stt()
         transcript, confidence = await asyncio.to_thread(
-            stt.transcribe_from_path, tmp_path
+            stt.transcribe_from_path, wav_path
         )
         logger.info(
             f"[speech_to_text] transcript='{transcript[:80]}…' confidence={confidence:.2f}"
         )
     finally:
-        os.unlink(tmp_path)
+        # Clean up both temp files
+        for p in (raw_path, wav_path):
+            try:
+                os.unlink(p)
+            except OSError:
+                pass
 
     return {
         **state,
